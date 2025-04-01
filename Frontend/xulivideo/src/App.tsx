@@ -1,25 +1,29 @@
 import React from 'react';
 import logo from './logo.svg';
 import './App.css';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Video from './Components/VideoPage/index'; // Assuming you named your main app component VideoStreamingApp
+import UploadPage from './Components/VideoPage/upload'; // Assuming you named your upload component UploadPage
+import SummaryPage from './Components/VideoPage/summary'; // Assuming you named your summary component SummaryPage
+import TextEditorPage from './Components/VideoPage/texteditor'; // Assuming you named your summary component SummaryPage
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+      <BrowserRouter>
+        <Routes>
+          {/* Route for the main Video Streaming App page */}
+          <Route path="/" element={<Video />} />
+
+          {/* Route for the Video Upload Page */}
+          <Route path="/upload" element={<UploadPage />} />
+
+          {/* Route for the Video Summary Page */}
+          <Route path="/summary" element={<SummaryPage />} />
+            <Route path="/texteditor" element={<TextEditorPage />} />
+          {/* Redirect any unmatched route to the home page */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </BrowserRouter>
   );
 }
 

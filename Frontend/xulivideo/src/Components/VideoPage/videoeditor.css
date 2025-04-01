@@ -1,0 +1,82 @@
+/* CSS for Media and Text Tab */
+.tabs-container {
+    display: flex;
+    flex-direction: column;
+    width: 200px;  /* Đặt chiều rộng cho các tab nhỏ lại */
+}
+
+.tab {
+    margin-bottom: 10px;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.tab.active {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+/* For the Text Display Section */
+.text-display {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.text-display h2 {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* Video Section */
+.video-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.video-container video {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    transition: all 0.3s ease;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+    .tabs-container {
+        width: 100%;
+    }
+
+    .text-display {
+        font-size: 18px;
+    }
+
+    .video-container video {
+        width: 100%;
+        height: auto;
+    }
+
+    /* Adjustments for tab layout */
+    .tabs-container {
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    .tab {
+        margin: 0 5px;
+    }
+}
+
+/* For video timeline control */
+.timeline-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.timeline-slider {
+    width: 100%;
+    margin-top: 20px;
+}
