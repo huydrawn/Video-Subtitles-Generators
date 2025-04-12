@@ -8,10 +8,24 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.example.video.editor.security.oauth.CustomOAuth2SuccessHandler;
+
+import lombok.RequiredArgsConstructor;
+
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+	private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
 	public SecurityFilterChain configSecurity(HttpSecurity http) throws Exception {
-		
+		http.csrf(csrf -> csrf.disable())
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/public/**", "/oauth2/**").permitAll()
+            .anyRequest().authenticated()
+        )
+        .oauth2Login(oauth2 -> oauth2
+            .loginPage("/oauth2/authorization/google") // hoặc URL bạn định nghĩa
+            .successHandler(customOAuth2SuccessHandler) // 👈 cấu hình ở đây
+        );
 		return http.build();
 	}
 	@Bean

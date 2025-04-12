@@ -29,12 +29,13 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 	@Override
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication authentication) throws IOException {
+		
 		OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
 		OAuth2User user = oauthToken.getPrincipal();
 
 		String email = user.getAttribute("email");
 		String name = user.getAttribute("name");
-
+		
 		// Lưu user nếu lần đầu
 		User dbUser = userRepository.findByEmail(email).orElseGet(() -> {
 			return userRepository.save(User.builder().email(email).build());
