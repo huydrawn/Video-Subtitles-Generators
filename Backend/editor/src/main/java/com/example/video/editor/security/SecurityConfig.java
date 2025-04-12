@@ -18,7 +18,7 @@ public class SecurityConfig {
 	public CorsConfigurationSource corsConfigurationSource() {
 	    CorsConfiguration config = new CorsConfiguration();
 	    config.setAllowCredentials(true); // ✅ Cho phép gửi cookie/token nếu cần
-	    config.addAllowedOrigin("http://localhost:3000"); // ✅ CHỈ host này được phép
+	    config.addAllowedOrigin("*"); // ✅ CHỈ host này được phép
 	    config.addAllowedHeader("*");
 	    config.addAllowedMethod("*"); // GET, POST, PUT, DELETE...
 
