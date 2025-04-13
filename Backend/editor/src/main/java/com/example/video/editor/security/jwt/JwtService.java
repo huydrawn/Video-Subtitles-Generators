@@ -1,30 +1,67 @@
 package com.example.video.editor.security.jwt;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.security.Key;
 import java.util.Date;
+import java.util.function.Function;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
 
-import com.example.video.editor.model.User;
-
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
-	@Value("jwt.secret-key")
+
+    // Phải dài ít nhất 256-bit (tức là 32 ký tự nếu base64)
+	@Value("${jwt.secret-key}")
     private String SECRET_KEY ;
 
-    public String generateToken(User user) {
+    private Key getSignInKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String generateToken(String email) {
         return Jwts.builder()
-            .setSubject(user.getEmail())
-            .claim("name", user.getPassword())
-            .setIssuedAt(new Date())
-            .setExpiration(Date.from(Instant.now().plus(1, ChronoUnit.DAYS)))
-            .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()))
-            .compact();
+                .setSubject(email)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 3600000)) // 1h
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String extractEmail(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> resolver) {
+        Claims claims = extractAllClaims(token);
+        return resolver.apply(claims);
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSignInKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    public boolean isTokenValid(String token, String email) {
+        final String extractedUsername = extractEmail(token);
+        return extractedUsername.equals(email) && !isTokenExpired(token);
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
     }
 }

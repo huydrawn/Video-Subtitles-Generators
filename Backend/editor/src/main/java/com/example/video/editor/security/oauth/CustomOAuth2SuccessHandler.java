@@ -29,7 +29,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 	@Override
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication authentication) throws IOException {
-		
+		System.out.println(request.getContextPath());
 		OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
 		OAuth2User user = oauthToken.getPrincipal();
 
@@ -42,10 +42,10 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 		});
 
 		// Tạo JWT
-		String jwt = jwtService.generateToken(dbUser);
-
+		String jwt = jwtService.generateToken(dbUser.getEmail());
+		System.out.println(jwt);
 		// Trả JWT về frontend (redirect với JWT hoặc trả JSON)
-		String redirectUrl = "http://localhost:3000/oauth2/success?token=" + jwt;
+		String redirectUrl = "http://localhost:3000/oauth2/success?token=" + "123";
 		response.sendRedirect(redirectUrl);
 	}
 
