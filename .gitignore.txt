@@ -1,0 +1,1 @@
+Backend/editor/src/main/resources/application.properties
