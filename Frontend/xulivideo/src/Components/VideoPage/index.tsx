@@ -20,6 +20,7 @@ import * as DarkReader from 'darkreader';
 
 // Removed useState from here as it's now imported at the top
 import TextEditor from './texteditor'; // Ensure this path is correct
+import AuthenticatePage from '../Auth/AuthenticatePage'; // Import AuthenticatePage - IMPORTANT
 
 const { Header, Sider, Content } = Layout;
 const { Search } = Input;
@@ -166,17 +167,24 @@ const App: React.FC = () => {
         const pathMap: { [key: string]: string } = {
             '/': 'home',
             '/texteditor': 'text', // Match the actual path used in Link
+            '/login': 'signin',    // Add for Sign In menu
+            '/register': 'signup'  // Add for Sign Up menu
             // Add other paths as needed
         };
         return [pathMap[location.pathname] || 'home'];
     }
 
     const isEditorPage = location.pathname === '/texteditor'; // Match the actual path
+    const isAuthPage = location.pathname === '/login' || location.pathname === '/register'; // Check for auth paths - IMPORTANT
 
     if (isEditorPage) {
-        // Render only the TextEditor component
+        // Render only the TextEditor componenta
         // Consider passing dark mode state or adding a toggle within TextEditor if needed there too
         return <TextEditor />;
+    }
+
+    if (isAuthPage) {
+        return <AuthenticatePage />; // Render AuthenticatePage if path is /login or /register - IMPORTANT
     }
 
     // Render the original layout for other pages (like Home)
@@ -202,8 +210,12 @@ const App: React.FC = () => {
                     <Menu.Item key="children" icon={<SmileOutlined />}>Children</Menu.Item>
                     <Menu.Item key="other" icon={<SettingOutlined />}>Other</Menu.Item>
                     <Menu.Divider />
-                    <Menu.Item key="signin" icon={<LoginOutlined />}>Sign In</Menu.Item>
-                    <Menu.Item key="signup" icon={<UserAddOutlined />}>Sign Up</Menu.Item>
+                    <Menu.Item key="signin" icon={<LoginOutlined />}>
+                        <Link to="/login">Sign In</Link>  {/* Link to /login - IMPORTANT */}
+                    </Menu.Item>
+                    <Menu.Item key="signup" icon={<UserAddOutlined />}>
+                        <Link to="/register">Sign Up</Link> {/* Link to /register - IMPORTANT */}
+                    </Menu.Item>
                     <Menu.Item key="logout" icon={<LogoutOutlined />}>Logout</Menu.Item>
                 </Menu>
             </Sider>
