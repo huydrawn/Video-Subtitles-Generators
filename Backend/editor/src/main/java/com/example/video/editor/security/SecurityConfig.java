@@ -20,7 +20,7 @@ public class SecurityConfig {
 	public SecurityFilterChain configSecurity(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable())
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/public/**", "/oauth2/**").permitAll()
+            .requestMatchers("/api/public/**", "/oauth2/**","/sub/**").permitAll()
             .anyRequest().authenticated()
         )
         .oauth2Login(oauth2 -> oauth2.successHandler(customOAuth2SuccessHandler)
