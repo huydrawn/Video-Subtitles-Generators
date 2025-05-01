@@ -48,6 +48,11 @@
 			<version>0.11.5</version>
 			<scope>runtime</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20210307</version> <!-- Bạn có thể thay đổi phiên bản nếu cần -->
+		</dependency>
 		<!-- Cần cho việc serialize/deserialize payload -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
