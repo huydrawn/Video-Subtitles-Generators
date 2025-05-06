@@ -1,5 +1,6 @@
 package com.example.video.editor.controller;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.video.editor.service.CloudinaryService;
 import com.example.video.editor.service.autoSub.AudioService;
+import com.example.video.editor.service.progess.TaskProcessingService;
 
 @RestController
 @RequestMapping("/sub")
@@ -20,6 +22,8 @@ public class SubtitlesController {
 	CloudinaryService cloudinaryService;
 	@Autowired
 	AudioService audioService;
+	@Autowired
+	TaskProcessingService taskProcessingService;
 
 	@PostMapping("/upload")
 	public ResponseEntity<String> uploadVideo(@RequestParam("file") MultipartFile file) throws IOException {
@@ -32,6 +36,7 @@ public class SubtitlesController {
 
 	@PostMapping("/test")
 	public ResponseEntity<String> upload() throws Exception {
-		return ResponseEntity.ok(audioService.getSrtWithVideoId(0, "vi"));
+		String id = taskProcessingService.startProgressTask(new Test()); 
+		return ResponseEntity.ok(id);
 	}
 }
