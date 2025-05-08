@@ -19,7 +19,7 @@ import {
 import * as DarkReader from 'darkreader';
 
 // Removed useState from here as it's now imported at the top
-import TextEditor from './texteditor'; // Ensure this path is correct
+import TextEditor from './VideoEditor'; // Ensure this path is correct
 import AuthenticatePage from '../Auth/AuthenticatePage'; // Import AuthenticatePage - IMPORTANT
 
 const { Header, Sider, Content } = Layout;
