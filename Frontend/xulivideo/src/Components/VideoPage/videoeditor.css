@@ -1,82 +1,904 @@
-/* CSS for Media and Text Tab */
-.tabs-container {
-    display: flex;
-    flex-direction: column;
-    width: 200px;  /* Đặt chiều rộng cho các tab nhỏ lại */
+body {
+    background-color: #141414; /* Ant dark bg */
+    color: rgba(255, 255, 255, 0.85); /* Ant dark text */
+    overflow: hidden; /* Prevent body scroll */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
-.tab {
-    margin-bottom: 10px;
-    padding: 10px;
+/* Main Layout - Use transparent backgrounds, rely on ConfigProvider */
+.video-editor-layout,
+.video-editor-layout .ant-layout-sider,
+.video-editor-layout .ant-layout-header,
+.video-editor-layout .ant-layout-content,
+.video-editor-layout .ant-layout-footer {
+    background-color: transparent;
+}
+
+/* Specific Backgrounds & Borders */
+.video-editor-layout .ant-layout-header {
+    background-color: #1f1f1f;
+    border-bottom: 1px solid #303030;
+}
+.video-editor-layout .preview-header {
+    background-color: #1f1f1f;
+    border-bottom: 1px solid #303030;
+    height: 40px; /* Reduced height */
+    padding: 0 12px; /* Reduced padding */
+}
+.video-editor-layout .preview-container {
+    background-color: #000000;
+    margin: 0;
+    flex-grow: 1;
+    position: relative; /* Needed for absolutely positioned canvas/moveable */
+}
+.video-editor-layout .ant-layout-sider {
+    border-right: 1px solid #303030;
+}
+.video-editor-layout .properties-sider {
+    border-left: 1px solid #303030;
+    border-right: none;
+    background-color: #1f1f1f !important; /* Match header */
+}
+.video-editor-layout .contextual-sider {
+    background-color: #1f1f1f !important; /* Match header */
+}
+.video-editor-layout .icon-sider {
+    background-color: #1f1f1f !important; /* Match header */
+}
+.video-editor-layout .ant-drawer .ant-drawer-content-wrapper {
+    background-color: #1f1f1f;
+}
+.video-editor-layout .ant-drawer .ant-drawer-header {
+    background-color: #1f1f1f;
+    border-bottom: 1px solid #303030;
+}
+.video-editor-layout .ant-drawer .ant-drawer-title {
+    color: rgba(255, 255, 255, 0.85);
+}
+.video-editor-layout .ant-drawer .ant-drawer-close {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+/* Menu styling */
+.main-menu .ant-menu-item {
+    height: 48px !important;
+    width: 100% !important; /* Full width in vertical */
+    min-width: 48px !important; /* Ensure width in inline */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px !important;
+    margin-top: 0 !important;
+    padding: 0 12px !important;
+    border-radius: 4px;
+}
+.main-menu .ant-menu-item .anticon {
+    font-size: 22px; /* Adjusted icon size */
+}
+.main-menu.ant-menu-inline-collapsed .ant-menu-item {
+    padding: 0 !important; /* Center icon when collapsed */
+    width: 48px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+.main-menu .ant-menu-item-selected {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Contextual Panel */
+.contextual-panel {
+    background-color: #1f1f1f;
+}
+.contextual-panel .ant-tabs-nav {
+    margin-bottom: 0;
+    padding: 0 8px;
+}
+.contextual-panel .ant-tabs-tab {
+    padding: 8px 12px; /* Adjust tab padding */
+    font-size: 13px;
+}
+.media-panel-content {
+    padding: 12px;
+    overflow-y: auto;
+    height: calc(100% - 38px); /* Adjust based on tab height */
+}
+.media-asset-card {
+    background-color: #2a2a2a !important;
+    border: 1px solid #3a3a3a !important;
+}
+.media-asset-card .ant-card-body {
+    padding: 6px !important;
+}
+.media-asset-card .ant-avatar {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 4px;
+}
+.media-asset-card .ant-typography strong {
+    font-size: 12px;
+    line-height: 1.3;
+}
+.upgrade-card .ant-card-body {
+    padding: 10px !important;
+}
+
+/* Properties Panel */
+.properties-panel-content {
+    padding: 16px;
+    height: 100%;
+    overflow-y: auto;
+}
+.properties-panel-content .ant-typography,
+.properties-panel-content .ant-form-item-label > label,
+.properties-panel-content .ant-input-prefix,
+.properties-panel-content .ant-input-suffix,
+.properties-panel-content .ant-select-selection-item,
+.properties-panel-content .ant-slider-mark-text { /* Target more elements */
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px; /* Consistent font size */
+}
+.properties-panel-content .ant-input-number-input,
+.properties-panel-content .ant-input {
+    font-size: 13px;
+}
+.properties-panel-content .ant-divider {
+    border-color: #424242;
+    margin: 12px 0;
+}
+.properties-section-header {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.65);
+}
+.color-picker-placeholder {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #424242;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
     cursor: pointer;
 }
-
-.tab.active {
-    background-color: #f0f0f0;
-    font-weight: bold;
+.properties-panel-content .ant-row {
+    margin-bottom: 6px; /* Reduce spacing between rows */
+}
+.properties-panel-content .ant-slider {
+    margin-top: 2px;
+    margin-bottom: 2px;
 }
 
-/* For the Text Display Section */
-.text-display {
-    font-size: 24px;
-    margin-bottom: 20px;
+
+/* Timeline */
+.timeline-footer {
+    border-top: 1px solid #303030;
+    background-color: #1f1f1f; /* Consistent bg */
+}
+.timeline-controls {
+    background-color: #1f1f1f;
+    border-bottom: 1px solid #303030;
+    height: 48px; /* Adjusted height */
+    padding: 0 12px;
+}
+.timeline-controls .ant-btn-icon-only {
+    font-size: 16px;
+}
+.timeline-controls .ant-btn-sm {
+    font-size: 12px; /* Smaller text on small buttons */
+}
+.timeline-timecode, .timeline-duration {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 13px;
+    min-width: 95px; /* Adjusted width for HH:MM:SS.mmm */
+    color: rgba(255, 255, 255, 0.85);
+}
+.timeline-duration {
+    color: rgba(255, 255, 255, 0.45);
 }
 
-.text-display h2 {
-    font-size: 32px;
-    font-weight: bold;
-    margin-bottom: 10px;
+.timeline-tracks-area {
+    background-color: #141414; /* Darker track area bg */
+    overflow: hidden;
+    position: relative;
+    flex-grow: 1;
+}
+.timeline-scroll-container {
+    overflow-x: auto;
+    overflow-y: scroll;
+    height: 100%;
+    position: relative;
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #555 #333; /* Firefox */
+}
+/* Webkit Scrollbars */
+.timeline-scroll-container::-webkit-scrollbar {
+    width: 10px; /* Slightly thicker */
+    height: 10px;
+}
+.timeline-scroll-container::-webkit-scrollbar-track {
+    background: #222; /* Darker track */
+}
+.timeline-scroll-container::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 5px;
+    border: 2px solid #222;
 }
 
-/* Video Section */
-.video-container {
+.timeline-content-width {
+    position: relative;
+    padding-top: 28px; /* Space for ruler */
+    min-height: 100%;
+}
+
+.ruler-container {
+    height: 28px;
+    background: #262626;
+    border-bottom: 1px solid #3a3a3a;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 20;
+    user-select: none;
+    overflow: hidden; /* Prevent markers overflowing */
+}
+.ruler-marker {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    background: #666;
+    pointer-events: none;
+}
+.ruler-marker.major {
+    background: #aaa;
+}
+.ruler-label {
+    position: absolute;
+    bottom: 100%; /* Position above line */
+    transform: translateX(3px); /* Align left of tick */
+    margin-bottom: 1px;
+    font-size: 10px;
+    color: #aaa;
+    white-space: nowrap;
+}
+
+.playhead-line {
+    position: absolute;
+    top: 0; /* Start from ruler top */
+    bottom: 0; /* Extend full height of scroll container */
+    width: 2px;
+    background: #1677ff; /* Blue playhead */
+    z-index: 25;
+    pointer-events: none;
+}
+.playhead-handle { /* Blue triangle on ruler */
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -1px); /* Center on line */
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #1677ff; /* Pointing down */
+    z-index: 26;
+    cursor: col-resize; /* Indicate draggability */
+}
+.timeline-seek-slider .ant-slider-handle { /* Make slider handle cover ruler better */
+    z-index: 30 !important;
+    opacity: 0 !important;
+    width: 20px !important;
+    height: 30px !important;
+    margin-top: -15px !important; /* Center vertically on ruler */
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    cursor: col-resize !important;
+}
+
+.timeline-track {
+    height: 60px; /* Adjusted track height */
+    position: relative;
+    border-bottom: 1px solid #303030;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
+    align-items: stretch;
 }
-
-.video-container video {
-    width: 100%;
-    height: auto;
-    max-width: 100%;
-    transition: all 0.3s ease;
-}
-
-/* Responsive adjustments for smaller screens */
-@media (max-width: 768px) {
-    .tabs-container {
-        width: 100%;
-    }
-
-    .text-display {
-        font-size: 18px;
-    }
-
-    .video-container video {
-        width: 100%;
-        height: auto;
-    }
-
-    /* Adjustments for tab layout */
-    .tabs-container {
-        flex-direction: row;
-        justify-content: space-around;
-    }
-
-    .tab {
-        margin: 0 5px;
-    }
-}
-
-/* For video timeline control */
-.timeline-container {
+.timeline-track-header {
+    width: 50px; /* Wider track header */
+    flex-shrink: 0;
+    background-color: #2a2a2a;
+    border-right: 1px solid #303030;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    padding: 4px;
+    gap: 4px;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 10px;
+}
+.timeline-track-header .ant-btn {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 14px; /* Slightly larger icons in header */
+}
+.timeline-track-clips-area {
+    position: relative;
+    flex-grow: 1;
+    overflow: hidden;
+    background-color: #1f1f1f;
+    cursor: default; /* Default cursor */
+}
+.timeline-track-clips-area:hover {
+    /* Add indication for adding clips? */
 }
 
-.timeline-slider {
+.timeline-clip {
+    position: absolute;
+    height: 48px; /* Adjusted clip height */
+    top: 50%;
+    transform: translateY(-50%);
+    border: 1px solid #555;
+    border-radius: 4px;
+    background-color: #333;
+    overflow: hidden;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    transition: border-color 0.1s, box-shadow 0.1s;
+    z-index: 5;
+}
+.timeline-clip.selected {
+    border-color: #1677ff;
+    box-shadow: 0 0 0 1px #1677ff; /* Thinner blue outline */
+    z-index: 10;
+}
+.timeline-clip:active {
+    cursor: grabbing;
+}
+
+.clip-thumbnail-container {
+    position: absolute; inset: 0; display: flex; z-index: 1;
+}
+.clip-thumbnail-segment {
+    position: absolute; top: 0; bottom: 0;
+    background-size: cover; background-position: center center; background-repeat: no-repeat;
+}
+.clip-info-overlay {
+    position: absolute; inset: 0;
+    background-color: rgba(0, 0, 0, 0.3); /* Less intense overlay */
+    z-index: 2; display: flex; align-items: center;
+    padding: 0 6px; color: #fff; pointer-events: none; font-size: 12px;
+}
+.clip-info-overlay .anticon {
+    margin-right: 4px; flex-shrink: 0; font-size: 14px;
+}
+.clip-info-overlay .ant-typography {
+    color: #fff; flex-grow: 1; line-height: 1.2;
+}
+
+/* Moveable handles for timeline */
+.timeline-moveable .moveable-control {
+    background: #1677ff !important;
+    border: 1px solid white !important;
+    width: 8px !important; /* Smaller handles */
+    height: 24px !important;
+    border-radius: 2px !important;
+    margin-top: -12px !important; /* Adjust centering */
+}
+.timeline-moveable .moveable-line.moveable-direction {
+    background: none !important;
+}
+
+/* Preview Moveable */
+.moveable-target-preview {
+    border: 1px solid #1677ff; /* Thinner border */
+    box-shadow: 0 0 4px rgba(22, 119, 255, 0.4);
+    background: rgba(22, 119, 255, 0.05); /* Very slight tint */
+    position: absolute; /* Ensure it's absolute */
+}
+.preview-moveable .moveable-control {
+    background: #fff !important; /* White controls */
+    border: 1px solid #1677ff !important; /* Blue border */
+    border-radius: 50% !important; /* Circle handles */
+    width: 10px !important;
+    height: 10px !important;
+}
+.preview-moveable .moveable-rotation-control{
+    border: 1px solid #1677ff !important;
+    background: #fff !important;
+    width: 14px !important; height: 14px !important;
+}
+.preview-moveable .moveable-line.moveable-direction {
+    background: #1677ff !important; /* Blue lines */
+    height: 1px !important; width: 1px !important;
+}
+
+
+/* Initial Screen */
+.initial-screen-content {
+    background-color: #141414; /* Match body */
+}
+.initial-screen-card {
+    background-color: #1f1f1f;
+    border: 1px solid #303030;
     width: 100%;
-    margin-top: 20px;
+    max-width: 450px;
+}
+.initial-screen-card .ant-card-body {
+    padding: 24px;
+}
+.initial-screen-card .ant-typography {
+    color: rgba(255, 255, 255, 0.85);
+}
+.initial-screen-dragger .ant-upload-drag {
+    background: #2a2a2a;
+    border-color: #444;
+    padding: 20px;
+}
+.initial-screen-dragger .ant-upload-drag:hover { border-color: #1677ff; }
+.initial-screen-dragger .ant-upload-drag-icon .anticon { color: #1677ff; font-size: 36px;}
+.initial-screen-dragger .ant-upload-text { color: rgba(255, 255, 255, 0.85); }
+.initial-screen-dragger .ant-upload-hint { color: rgba(255, 255, 255, 0.45); font-size: 12px;}
+
+.video-editor-layout .ant-layout-header,
+.video-editor-layout .ant-layout-sider,
+.video-editor-layout .ant-layout-footer,
+.video-editor-layout .ant-layout-content {
+    background: #2a2a2a; /* Darker background */
+    color: #ffffff;
+}
+
+.icon-sider {
+    border-right: 1px solid #303030;
+}
+
+.contextual-sider {
+    border-right: 1px solid #303030;
+    padding: 8px; /* Padding inside the panel */
+}
+
+.properties-sider {
+    border-left: 1px solid #303030;
+    padding: 8px; /* Padding inside the panel */
+}
+
+.timeline-footer {
+    background: #1e1e1e; /* Even darker for timeline */
+    border-top: 1px solid #303030;
+    display: flex;
+    flex-direction: column;
+    min-height: 150px; /* Ensure minimum height */
+}
+
+/* Preview Area */
+.preview-header {
+    padding: 8px 16px;
+    background: #242424;
+    border-bottom: 1px solid #303030;
+}
+
+.preview-container {
+    position: relative; /* Needed for absolute positioning of canvas and moveable target */
+    flex-grow: 1; /* Take available space */
+    overflow: hidden; /* Hide anything outside bounds */
+    display: flex; /* Use flex to center content */
+    align-items: center; /* Center horizontally */
+    justify-content: center; /* Center vertically */
+    background: #181818; /* Very dark background for preview area */
+}
+
+.preview-container canvas {
+    position: absolute; /* Position absolutely for manual centering/scaling */
+    /* Styles moved to inline in React for dynamic transform */
+    /* display: block; */
+    /* max-width: 100%; */
+    /* max-height: 100%; */
+    /* object-fit: contain; */
+    /* transform-origin: center center; */
+    /* transition: transform 0.1s ease-out; */
+}
+
+/* Moveable styles for preview */
+.preview-moveable {
+    /* Example: Customize border color */
+    --moveable-color: #7B61FF;
+}
+
+/* Timeline Area */
+.timeline-controls {
+    padding: 8px 16px;
+    background: #242424;
+    border-bottom: 1px solid #303030;
+    font-size: 12px;
+    color: #b0b0b0;
+    min-height: 40px; /* Ensure minimum height */
+}
+
+.timeline-timecode {
+    font-family: 'monospace';
+    font-size: 14px;
+    color: #ffffff;
+    min-width: 60px; /* Prevent jumping */
+}
+
+.timeline-duration {
+    font-family: 'monospace';
+    font-size: 14px;
+    color: #b0b0b0;
+    min-width: 65px; /* Prevent jumping */
+}
+
+.timeline-scroll-container {
+    flex-grow: 1;
+    overflow-x: auto; /* Enable horizontal scrolling */
+    overflow-y: hidden; /* Hide vertical scroll */
+    position: relative; /* For absolute positioning of content inside */
+    height: calc(100% - 40px); /* Take remaining height */
+    min-height: 110px; /* Ensure min height */
+    padding-bottom: 10px; /* Add some padding to see the bottom */
+    scrollbar-color: #555 #2a2a2a; /* Custom scrollbar (Firefox) */
+    scrollbar-width: thin; /* Custom scrollbar (Firefox) */
+}
+
+.timeline-scroll-container::-webkit-scrollbar {
+    height: 8px; /* Height of horizontal scrollbar */
+}
+
+.timeline-scroll-container::-webkit-scrollbar-track {
+    background: #2a2a2a; /* Track color */
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb {
+    background-color: #555; /* Thumb color */
+    border-radius: 4px;
+    border: 2px solid #2a2a2a; /* Space around thumb */
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb:hover {
+    background-color: #777; /* Thumb color on hover */
+}
+
+
+.timeline-content-width {
+    position: relative; /* Contains ruler, playhead, tracks, moveable */
+    /* width is set dynamically */
+    height: 100%;
+    /* Prevent selecting text */
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+
+.ruler-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0; /* Extends across the total width */
+    height: 25px; /* Height of the ruler bar */
+    background: #242424;
+    border-bottom: 1px solid #303030;
+    z-index: 25; /* Above clips but below playhead/slider */
+}
+
+.ruler-marker {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    background: #555;
+}
+
+.ruler-marker.major {
+    background: #ffffff;
+    height: 60%; /* Longer markers for major seconds */
+}
+
+.ruler-label {
+    position: absolute;
+    bottom: 60%; /* Position above major markers */
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #b0b0b0;
+    white-space: nowrap; /* Prevent wrapping */
+}
+
+
+.playhead-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px; /* Thin line */
+    background-color: #7B61FF; /* Primary color */
+    z-index: 30; /* Above everything else */
+    height: 100%;
+}
+
+.playhead-handle {
+    position: absolute;
+    top: -4px; /* Position slightly above the ruler */
+    left: 50%; /* Center horizontally on the line */
+    transform: translateX(-50%);
+    width: 10px;
+    height: 10px;
+    background-color: #7B61FF; /* Match line color */
+    border-radius: 50%;
+    cursor: grab; /* Indicate draggable */
+    z-index: 31; /* Above the line */
+}
+
+.timeline-seek-slider {
+    /* The Slider is positioned absolutely over the ruler area */
+    /* Its track/rail are transparent */
+    /* The 'onChange' event handles seeking */
+}
+
+
+.timeline-track {
+    display: flex;
+    min-height: 40px; /* Default track height */
+    border-bottom: 1px solid #303030;
+    position: relative; /* Needed for clip positioning */
+}
+
+.timeline-track-header {
+    width: 50px; /* Fixed width for track number/controls */
+    background: #2a2a2a;
+    border-right: 1px solid #303030;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #b0b0b0;
+    padding: 4px 0;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.timeline-track-header button {
+    color: #b0b0b0;
+    margin: 2px 0;
+}
+
+.timeline-track-clips-area {
+    flex-grow: 1;
+    position: relative; /* Context for clip absolute positioning */
+    overflow: hidden; /* Hide clips outside track bounds */
+    background: #1e1e1e; /* Background for clips area */
+    min-height: 40px; /* Match track height */
+}
+
+
+.timeline-clip {
+    position: absolute; /* Position based on time * zoom */
+    top: 50%; /* Vertically center */
+    transform: translateY(-50%); /* Adjust for centering */
+    height: 30px; /* Clip height */
+    background: #4a4a4a; /* Default clip background */
+    border-radius: 4px;
+    overflow: hidden; /* Hide content outside clip bounds */
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    box-sizing: border-box;
+    cursor: grab;
+    transition: background-color 0.1s ease; /* Smooth transition */
+    z-index: 10; /* Below playhead/moveable */
+}
+
+.timeline-clip.selected {
+    background: #7B61FF; /* Highlight color when selected */
+    z-index: 11; /* Bring selected clip slightly forward */
+}
+
+.timeline-clip:active {
+    cursor: grabbing;
+}
+
+
+.clip-thumbnail-container {
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    display: flex;
+    overflow: hidden;
+    /* Optional: add background pattern while thumbnails load */
+}
+
+.clip-thumbnail-segment {
+    position: absolute; /* Position segments */
+    top: 0; bottom: 0;
+    background-size: cover;
+    background-position: center;
+    /* width is set dynamically */
+    /* left is set dynamically */
+}
+
+
+.clip-info-overlay {
+    position: relative; /* Ensure info is above thumbnails */
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
+    padding: 0 4px;
+    width: 100%; /* Take full width */
+    box-sizing: border-box;
+}
+
+.clip-info-overlay .anticon {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+
+/* Moveable styles for timeline clips */
+.timeline-moveable .moveable-line {
+    background: transparent !important; /* Hide default lines */
+}
+.timeline-moveable .moveable-control {
+    background: #7B61FF !important; /* Match selected color */
+    border-radius: 2px; /* Square handles */
+    width: 6px !important; /* Thin handles */
+    height: 30px !important; /* Match clip height */
+    transform: translateY(-50%) !important; /* Vertically center handles */
+    margin-left: -3px; /* Adjust margin for centering */
+}
+
+/* Hide non-resize handles */
+.timeline-moveable .moveable-control.moveable-nw,
+.timeline-moveable .moveable-ne,
+.timeline-moveable .moveable-se,
+.timeline-moveable .moveable-sw,
+.timeline-moveable .moveable-n,
+.timeline-moveable .moveable-s,
+.timeline-moveable .moveable-c {
+    display: none !important;
+}
+
+
+/* Initial Screen */
+.initial-screen-content {
+    background: #1f1f1f;
+}
+
+.initial-screen-card {
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+}
+
+.initial-screen-dragger .ant-upload.ant-upload-drag {
+    background: #2a2a2a;
+    border-color: #4a4a4a;
+    color: #b0b0b0;
+}
+
+.initial-screen-dragger .ant-upload.ant-upload-drag:hover {
+    border-color: #7B61FF;
+}
+
+.initial-screen-dragger .ant-upload-drag-icon {
+    color: #7B61FF;
+}
+
+/* Antd Overrides (Optional based on global theme) */
+.ant-layout {
+    background: #1e1e1e;
+}
+
+.ant-layout-header {
+    background: #2a2a2a;
+}
+
+.ant-layout-sider {
+    background: #2a2a2a;
+}
+
+.ant-layout-footer {
+    background: #1e1e1e;
+    color: #fff;
+}
+
+.ant-menu.ant-menu-dark {
+    background: #2a2a2a;
+}
+
+.ant-menu.ant-menu-dark .ant-menu-item-selected {
+    background-color: rgba(123, 97, 255, 0.2); /* Primary color with transparency */
+}
+
+.ant-menu.ant-menu-dark .ant-menu-item:hover,
+.ant-menu.ant-menu-dark .ant-menu-item-active {
+    background-color: rgba(123, 97, 255, 0.1); /* Lighter hover */
+}
+
+.ant-input {
+    background: #3a3a3a;
+    border-color: #4a4a4a;
+    color: #ffffff;
+}
+
+.ant-input:focus {
+    border-color: #7B61FF;
+    box-shadow: 0 0 0 2px rgba(123, 97, 255, 0.2);
+}
+
+.ant-select .ant-select-selector {
+    background: #3a3a3a !important;
+    border-color: #4a4a4a !important;
+    color: #ffffff !important;
+}
+
+.ant-select-arrow {
+    color: #b0b0b0 !important;
+}
+
+.ant-slider .ant-slider-track {
+    background-color: #7B61FF; /* Primary color for track */
+}
+
+.ant-slider .ant-slider-handle {
+    border-color: #7B61FF; /* Primary color for handle */
+}
+
+.ant-btn {
+    border-color: #4a4a4a;
+    color: #ffffff;
+    background: #3a3a3a;
+}
+
+.ant-btn:hover {
+    border-color: #7B61FF !important;
+    color: #7B61FF !important;
+    background: #3a3a3a !important; /* Keep background same on hover */
+}
+
+.ant-btn-primary {
+    background: #7B61FF !important;
+    border-color: #7B61FF !important;
+    color: #ffffff !important;
+}
+
+.ant-btn-primary:hover {
+    background: #9c8bff !important; /* Lighter primary on hover */
+    border-color: #9c8bff !important;
+}
+
+.ant-btn-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Adjust Drawer styles for dark theme */
+.ant-drawer-content-wrapper .ant-drawer-content {
+    background-color: #1f1f1f; /* Dark background */
+    color: #ffffff; /* White text */
+}
+
+.ant-drawer-header {
+    background-color: #1f1f1f; /* Dark background */
+    border-bottom: 1px solid #303030; /* Subtle border */
+}
+
+.ant-drawer-title {
+    color: #ffffff; /* White title text */
+}
+
+.ant-drawer-close {
+    color: #b0b0b0; /* Close button color */
+}
+
+.ant-drawer-close:hover {
+    color: #ffffff; /* Close button color on hover */
+}
+
+
+/* General Text Colors */
+.ant-typography {
+    color: #ffffff;
+}
+.ant-typography-secondary {
+    color: #b0b0b0;
 }
