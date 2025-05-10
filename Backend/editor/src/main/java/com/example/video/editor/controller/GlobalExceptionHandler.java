@@ -1,13 +1,29 @@
 package com.example.video.editor.controller;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+
+import com.example.video.editor.exception.AlreadyExistsException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+	@ExceptionHandler(AlreadyExistsException.class)
+	public ResponseEntity<Object> handleGenericAlreadyExistsException(AlreadyExistsException ex, WebRequest request) {
+		Map<String, Object> body = new HashMap<>();
+		body.put("timestamp", LocalDateTime.now());
+		body.put("message", ex.getMessage());
+		body.put("status", HttpStatus.CONFLICT.value()); // 409 Conflict
+
+		return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+	}
 
 	// Xử lý tất cả lỗi chung chung
 	@ExceptionHandler(Exception.class)
