@@ -1,24 +1,58 @@
 package com.example.video.editor.model;
 
-import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity(name = "t_user")
+@Entity
+@Table(name = "users")
 @Data
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
-	@Id 
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private int id;
-	@Column(name = "username", columnDefinition = "nvarchar(255) UNIQUE")
-	private String username;
-	@Column(name = "email", unique = true)
-	private String email;
-	@Column(name = "password")
-	private String password;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
+    private Long userId;
+
+    @Column(name = "username", unique = true, nullable = false, length = 50)
+    private String username;
+
+    @Column(name = "email", unique = true, nullable = false, length = 100)
+    private String email;
+
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @Enumerated(EnumType.STRING) // Chỉ định cách lưu Enum vào database (dạng chuỗi)
+    @Column(name = "status", nullable = false, length = 20)
+    private UserStatus status;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "workspace_id", unique = true) // Khóa ngoại trỏ đến Workspace
+    private Workspace workspace;
+    
 }
