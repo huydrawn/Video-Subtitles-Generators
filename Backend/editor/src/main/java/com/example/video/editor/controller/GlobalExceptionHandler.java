@@ -8,13 +8,28 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.example.video.editor.exception.AlreadyExistsException;
+import com.example.video.editor.exception.NotFoundException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(NotFoundException.class)
+	public ResponseEntity<Object> handleNotFoundException(NotFoundException ex, WebRequest request) {
+		Map<String, Object> body = new HashMap<>();
+		body.put("timestamp", LocalDateTime.now());
+		body.put("status", HttpStatus.NOT_FOUND.value());
+		body.put("error", "Not Found");
+		body.put("message", ex.getMessage());
+		body.put("path", ((ServletWebRequest) request).getRequest().getRequestURI());
+
+		return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+	}
+
 	@ExceptionHandler(AlreadyExistsException.class)
 	public ResponseEntity<Object> handleGenericAlreadyExistsException(AlreadyExistsException ex, WebRequest request) {
 		Map<String, Object> body = new HashMap<>();

@@ -1,14 +1,19 @@
 package com.example.video.editor.service;
 
+import java.time.LocalDateTime;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.video.editor.dto.UserRegistrationRequest;
 import com.example.video.editor.exception.AlreadyExistsException;
+import com.example.video.editor.exception.NotFoundException;
 import com.example.video.editor.model.User;
 import com.example.video.editor.model.UserStatus;
+import com.example.video.editor.model.Workspace;
 import com.example.video.editor.repository.UserRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 
 @Service
@@ -39,4 +44,22 @@ public class UserServiceImpl implements UserService {
 		user.setStatus(UserStatus.PENDING); // Hoặc trạng thái mặc định
 		return userRepository.save(user);
 	}
+
+	@Transactional
+    public User createWorkspaceForUser(Long userId, String workspaceName, String description) throws NotFoundException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng với ID: " + userId));
+
+        Workspace newWorkspace = Workspace.builder()
+                .workspaceName(workspaceName)
+                .description(description)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .user(user) // Thiết lập mối quan hệ ngược lại
+                .build();
+
+        user.setWorkspace(newWorkspace);
+        return userRepository.save(user);
+    }
+
 }

@@ -3,14 +3,16 @@ package com.example.video.editor.model;
 
 import java.time.LocalDateTime;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,7 +50,9 @@ public class User {
     @Enumerated(EnumType.STRING) // Chỉ định cách lưu Enum vào database (dạng chuỗi)
     @Column(name = "status", nullable = false, length = 20)
     private UserStatus status;
-    @Embedded
-    private Workspace workspaces ;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "workspace_id", unique = true) // Khóa ngoại trỏ đến Workspace
+    private Workspace workspace;
     
 }
