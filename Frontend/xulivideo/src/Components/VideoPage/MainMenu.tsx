@@ -1,4 +1,3 @@
-// src/Components/VideoPage/MainMenu.tsx
 import React from 'react';
 import { Menu, Tooltip, Button } from 'antd';
 import { theme } from 'antd';
@@ -38,7 +37,8 @@ export const MainMenu: React.FC<MainMenuProps> = React.memo(({
         { key: 'text', icon: <FontSizeOutlined />, title: "Text" },
         { key: 'visuals', icon: <AppstoreOutlined />, title: "Visuals", disabled: true },
         { key: 'audio', icon: <AudioOutlined />, title: "Audio", disabled: true },
-        { key: 'subtitles', icon: <MenuUnfoldOutlined />, title: "Subtitles", disabled: true },
+        // Ensure 'subtitles' key exists and is enabled if you want to click it
+        { key: 'subtitles', icon: <MenuUnfoldOutlined />, title: "Subtitles", disabled: false },
         { key: 'transcript', icon: <TranslationOutlined />, title: "Transcript", disabled: true },
         { key: 'translate', icon: <TranslationOutlined />, title: "Translate", disabled: true },
         { key: 'ai-voice', icon: <CustomerServiceOutlined />, title: "AI Voice", disabled: true },
@@ -47,26 +47,26 @@ export const MainMenu: React.FC<MainMenuProps> = React.memo(({
     // Map data to Ant Design Menu items format
     const antdMenuItems: MenuProps['items'] = menuItemsData.map((itemData) => {
         const isInlineCollapsed = mode === 'inline' || (mode === 'vertical' && collapsed);
-        // Use icon directly for collapsed state, title for expanded vertical
         const labelContent = isInlineCollapsed ? itemData.icon : itemData.title;
 
         return {
             key: itemData.key,
-            // Show icon beside label only when not collapsed inline
-            icon: isInlineCollapsed ? null : itemData.icon,
+            icon: isInlineCollapsed ? null : itemData.icon, // Only show icon when not collapsed inline
             disabled: itemData.disabled,
-            // Wrap label content with tooltip if collapsed
             label: isInlineCollapsed
                 ? <Tooltip placement="right" title={itemData.title}>{labelContent}</Tooltip>
                 : labelContent,
+            // Add icon specifically for inline collapsed mode rendering
+            ...(isInlineCollapsed && { icon: itemData.icon }),
         };
     });
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* This back button might be part of a header or a specific UI pattern, keep it if needed */}
             {mode === 'inline' && (
                 <div style={{
-                    height: '56px', // Match header height or desired space
+                    height: '56px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
