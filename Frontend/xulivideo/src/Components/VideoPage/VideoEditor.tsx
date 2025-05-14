@@ -1,9 +1,11 @@
+// **Modified VideoEditor.tsx**
+
 import React from 'react';
 import {
     Layout, Button, Input, Select, Space, Slider,
     Typography, Grid, theme, Drawer, Upload, Tabs, Avatar, Tooltip, Dropdown,
-    ConfigProvider, Switch, Row, Col, Card, // Added missing imports
-    message, // Import message for error/success popups
+    ConfigProvider, Switch, Row, Col, Card,
+    message, List, UploadProps
 } from 'antd';
 import {
     VideoCameraOutlined, FontSizeOutlined, AudioOutlined, AppstoreOutlined,
@@ -20,22 +22,23 @@ import {
 import type { MenuProps } from 'antd';
 import Moveable from 'react-moveable';
 
-// Import the hook, types, and components (Corrected Paths and Exports)
+// Import the hook, types, and components
 import {
-    useVideoEditorLogic, // This is the corrected hook
+    useVideoEditorLogic,
     formatTime,
+    parseTimecodeToSeconds,
     PREVIEW_ZOOM_FIT_MODE,
     PREVIEW_ZOOM_FILL_MODE,
-    PREVIEW_ZOOM_LEVELS // Ensure this is exported and imported
+    PREVIEW_ZOOM_LEVELS
 } from './useVideoEditorLogic';
-import type { VideoEditorLogic, ClipType, Keyframe } from './types'; // Adjusted path
-import { MainMenu } from './MainMenu'; // Adjusted path
-import { MediaPanel } from './MediaPanel'; // Adjusted path
-import { TextPanel } from './TextPanel'; // Adjusted path
-import { PropertiesPanel } from './PropertiesPanel'; // Adjusted path
+import type { VideoEditorLogic, ClipType, Keyframe, SubtitleEntry } from './types';
+import { MainMenu } from './MainMenu';
+import { MediaPanel } from './MediaPanel';
+import { TextPanel } from './TextPanel';
+import { PropertiesPanel } from './PropertiesPanel';
 
 // Import custom CSS
-import './videoeditor.css'; // Assuming CSS is in the same directory
+import './videoeditor.css';
 
 const { Header, Sider, Content, Footer } = Layout;
 const { Option } = Select;
@@ -52,12 +55,16 @@ const PreviewArea: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
         { key: PREVIEW_ZOOM_FIT_MODE, label: 'Fit' },
         { key: PREVIEW_ZOOM_FILL_MODE, label: 'Fill' },
         { type: 'divider' as const },
-        ...PREVIEW_ZOOM_LEVELS.map((level: number) => ({ // Added type for level
+        ...PREVIEW_ZOOM_LEVELS.map((level: number) => ({
             key: String(level), label: `${Math.round(level * 100)}%`
         }))
     ];
     const zoomButtonText = logic.previewZoomMode === PREVIEW_ZOOM_FIT_MODE ? 'Fit' :
         (logic.previewZoomMode === PREVIEW_ZOOM_FILL_MODE ? 'Fill' : `${Math.round(logic.previewZoomLevel * 100)}%`);
+
+    const activeSubtitleOnCanvas = logic.projectState.subtitles.find(sub =>
+        logic.currentTime >= sub.startTime && logic.currentTime < sub.endTime
+    );
 
     return (
         <>
@@ -81,9 +88,28 @@ const PreviewArea: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
                         objectFit: 'contain', transformOrigin: 'center center',
                         transition: 'transform 0.1s ease-out', position: 'absolute',
                         top:'50%', left: '50%',
-                        transform: `translate(-50%, -50%) scale(${logic.previewZoomLevel})` // Single transform
+                        transform: `translate(-50%, -50%) scale(${logic.previewZoomLevel})`
                     }}
                 />
+                {activeSubtitleOnCanvas && (
+                    <div className="preview-subtitle-overlay" style={{
+                        position: 'absolute', bottom: '10%', left: '50%', transform: 'translateX(-50%)',
+                        color: 'white',
+                        backgroundColor: 'rgba(0,0,0,0.7)',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '18px',
+                        textAlign: 'center',
+                        zIndex: 5,
+                        pointerEvents: 'none',
+                        whiteSpace: 'pre-wrap',
+                        textShadow: '0px 0px 2px rgba(0,0,0,0.5)',
+                        lineHeight: 1.4,
+                        maxWidth: '80%'
+                    }}>
+                        {activeSubtitleOnCanvas.text}
+                    </div>
+                )}
                 <div className="moveable-target-preview" style={{ pointerEvents: logic.selectedClip ? 'auto' : 'none', display: 'none', zIndex: 10 }} />
                 <Moveable
                     ref={logic.previewMoveableRef}
@@ -132,7 +158,11 @@ const TimelineControls: React.FC<{ logic: VideoEditorLogic, screens: any }> = ({
 const TimelineTracks: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
     const { token } = theme.useToken();
     const pxPerSec = Math.max(20, logic.timelineZoom);
-    const totalTimelineWidth = Math.max((logic.timelineContainerRef.current?.clientWidth || 500), (logic.projectState.totalDuration + 5) * pxPerSec);
+    const totalTimelineWidth = Math.max(
+        (logic.timelineContainerRef.current?.clientWidth || 500),
+        (logic.projectState.totalDuration + 5) * pxPerSec
+    );
+
     let secondsPerMajorMarker: number; let secondsPerMinorMarker: number;
     if (pxPerSec < 25) { secondsPerMajorMarker = 10; secondsPerMinorMarker = 2; }
     else if (pxPerSec < 60) { secondsPerMajorMarker = 5; secondsPerMinorMarker = 1; }
@@ -141,19 +171,23 @@ const TimelineTracks: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
     else { secondsPerMajorMarker = 0.5; secondsPerMinorMarker = 0.1; }
     const numMinorMarkers = Math.ceil(totalTimelineWidth / (secondsPerMinorMarker * pxPerSec));
 
+    const activeSubtitleInTimeline = logic.projectState.subtitles.find(sub =>
+        logic.currentTime >= sub.startTime && logic.currentTime < sub.endTime
+    );
+
+    const subtitleTrackHeight = logic.projectState.subtitles.length > 0 ? 35 : 0;
+
     return (
         <div ref={logic.timelineContainerRef} className="timeline-scroll-container">
-            {/* FIXED: Wrap direct children of scroll container in a single element */}
             <div
                 className="timeline-content-width"
-                style={{ width: `${totalTimelineWidth}px` }}
+                style={{ width: `${totalTimelineWidth}px`, paddingTop: `${28 + subtitleTrackHeight}px` }}
                 onClick={(e) => { if (e.target === e.currentTarget) logic.handleSelectClip(null); }}
             >
-                {/* Ruler and Playhead are positioned absolutely within this */}
-                <div className="ruler-container">
+                <div className="ruler-container" style={{ top: `${subtitleTrackHeight}px`, height: '28px' }}>
                     {Array.from({ length: numMinorMarkers }).map((_, i) => {
                         const time = i * secondsPerMinorMarker;
-                        if (time > logic.projectState.totalDuration + secondsPerMajorMarker * 2) return null;
+                        if (time > logic.projectState.totalDuration + secondsPerMajorMarker * 2 && time > (logic.currentTime + 10) * 2) return null;
                         const leftPos = time * pxPerSec;
                         const isMajor = Math.abs(time % secondsPerMajorMarker) < 0.001 || time === 0;
                         const markerHeight = isMajor ? '60%' : '30%';
@@ -164,20 +198,55 @@ const TimelineTracks: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
                             </React.Fragment>
                         );
                     })}
-                    <div className="playhead-line" style={{ left: `${logic.currentTime * pxPerSec}px` }}>
+                    <div className="playhead-line" style={{ left: `${logic.currentTime * pxPerSec}px`, top: '0px', bottom: `-${(logic.projectState.tracks.length * 60)}px` }}>
                         <div className="playhead-handle" />
                     </div>
                     <Slider
                         className="timeline-seek-slider"
                         value={logic.currentTime} max={logic.projectState.totalDuration || 1} min={0} step={0.01}
                         onChange={(v) => logic.handleTimelineSeek(v ?? 0)}
-                        tooltip={{ open: false }} trackStyle={{ background: 'transparent' }} railStyle={{ background: 'transparent' }}
-                        style={{ position: 'absolute', top: 0, left: 0, right: 0, margin: 0, padding: 0, height: '100%', zIndex: 28 }}
+                        tooltip={{ open: false }}
+                        // **MODIFICATION 1: Removed trackStyle prop**
+                        // The default Ant Design Slider track fills based on `value` prop and theme's primary color.
+                        // This is the desired behavior for showing progress when playing and stopping when paused.
+                        // trackStyle={{ background: logic.projectState.isPlaying ? token.colorPrimary : 'transparent' }}
+                        railStyle={{ background: 'transparent' }}
+                        style={{ position: 'absolute', top: '0px', left: 0, right: 0, margin: 0, padding: 0, height: '28px', zIndex: 28 }}
                     />
                 </div>
 
-                {/* Tracks Container (Relative positioning context for clips) */}
-                <div style={{ paddingTop: 0 /* Ruler handles padding */ }}>
+                {subtitleTrackHeight > 0 && (
+                    <div className="timeline-subtitle-track-area" style={{ height: `${subtitleTrackHeight}px`, top: '0px' }}>
+                        <div className="timeline-track-header"><Text>Subtitles</Text></div>
+                        <div className="timeline-track-clips-area" style={{ overflow: 'hidden' }}>
+                            {logic.projectState.subtitles.map(subtitle => {
+                                const subWidthPx = (subtitle.endTime - subtitle.startTime) * pxPerSec;
+                                const subLeftPx = subtitle.startTime * pxPerSec;
+                                const isCurrent = activeSubtitleInTimeline?.id === subtitle.id;
+                                return (
+                                    <div
+                                        key={subtitle.id}
+                                        className={`timeline-subtitle ${isCurrent ? 'active' : ''}`}
+                                        style={{
+                                            left: `${subLeftPx}px`,
+                                            width: `${Math.max(5, subWidthPx)}px`,
+                                            zIndex: isCurrent ? 25 : 20,
+                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px',
+                                            lineHeight: '30px', color: 'white', fontSize: '10px',
+                                            display: 'flex', alignItems: 'center'
+                                        }}
+                                        onClick={(e) => { e.stopPropagation(); logic.handleTimelineSeek(subtitle.startTime); }}
+                                        title={subtitle.text}
+                                    >
+                                        <Text ellipsis style={{ color: 'white', fontSize: '10px' }}>{subtitle.text}</Text>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                <div style={{ paddingTop: 0 }}>
                     {logic.projectState.tracks.map((track, trackIndex) => (
                         <div key={track.id} className="timeline-track">
                             <div className="timeline-track-header">
@@ -189,7 +258,9 @@ const TimelineTracks: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
                                 className="timeline-track-clips-area"
                                 onClick={(e) => { if (e.target === e.currentTarget) logic.handleSelectClip(null); }}
                             >
-                                {track.clips.map(clip => {
+                                {track.clips.filter(clip => {
+                                    return !(clip.type === 'text' && logic.projectState.subtitles.find(sub => sub.id === clip.id));
+                                }).map(clip => {
                                     const clipWidthPx = clip.duration * pxPerSec;
                                     const clipLeftPx = clip.startTime * pxPerSec;
                                     const isSelected = clip.id === logic.projectState.selectedClipId;
@@ -203,14 +274,17 @@ const TimelineTracks: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
                                             style={{ left: `${clipLeftPx}px`, width: `${displayWidth}px` }}
                                         >
                                             <div className="clip-thumbnail-container">
-                                                {/* Thumbnail rendering */}
                                                 {clip.thumbnailUrls && clip.thumbnailUrls.length > 0 && clip.type !== 'text' && (() => {
                                                     const segments: React.ReactNode[] = []; const segmentDuration = logic.THUMBNAIL_INTERVAL; const segmentWidthPx = segmentDuration * pxPerSec; let currentLeft = 0; const sortedThumbs = [...clip.thumbnailUrls].sort((a, b) => a.time - b.time);
-                                                    for (let i = 0; currentLeft < displayWidth; ++i) { const segmentStartTime = i * segmentDuration; let bestThumb = sortedThumbs[0]; for(let j = sortedThumbs.length - 1; j >= 0; j--) { if(sortedThumbs[j].time <= segmentStartTime + 0.01) { bestThumb = sortedThumbs[j]; break; }} const widthForThisSegment = Math.min(segmentWidthPx, displayWidth - currentLeft); if (widthForThisSegment <= 0) break; segments.push(<div key={`${clip.id}-thumb-${i}`} className="clip-thumbnail-segment" style={{ left: `${currentLeft}px`, width: `${widthForThisSegment}px`, backgroundImage: bestThumb ? `url(${bestThumb.url})` : 'none' }} />); currentLeft += widthForThisSegment; } return segments;
+                                                    for (let i = 0; currentLeft < displayWidth; ++i) { const segmentStartTime = clip.startTime + i * segmentDuration; let bestThumb = sortedThumbs[0]; for(let j = sortedThumbs.length - 1; j >= 0; j--) { if(sortedThumbs[j].time <= segmentStartTime + 0.01) { bestThumb = sortedThumbs[j]; break; }} const widthForThisSegment = Math.min(segmentWidthPx, displayWidth - currentLeft); if (widthForThisSegment <= 0) break; segments.push(<div key={`${clip.id}-thumb-${i}`} className="clip-thumbnail-segment" style={{ left: `${currentLeft}px`, width: `${widthForThisSegment}px`, backgroundImage: bestThumb ? `url(${bestThumb.url})` : 'none' }} />); currentLeft += segmentWidthPx; } return segments;
                                                 })()}
-                                                {/* Waveform placeholder */}
                                                 {(clip.type === 'video') && !clip.thumbnailUrls?.length && (
                                                     <div style={{width: '100%', height: '100%', background: 'repeating-linear-gradient( 45deg, #444, #444 2px, #3a3a3a 2px, #3a3a3a 4px)', opacity: 0.3}} title="Waveform Placeholder"></div>
+                                                )}
+                                                {clip.type === 'text' && (
+                                                    <div className="clip-text-content">
+                                                        <Text ellipsis style={{ color: 'white', fontSize: '10px' }}>{clip.source as string}</Text>
+                                                    </div>
                                                 )}
                                             </div>
                                             <div className="clip-info-overlay">
@@ -230,7 +304,6 @@ const TimelineTracks: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
                     </div>
                 </div>
 
-                {/* Moveable is positioned relative to timeline-scroll-container */}
                 <Moveable
                     ref={logic.moveableRef}
                     target={logic.projectState.selectedClipId ? `#clip-${logic.projectState.selectedClipId}` : null}
@@ -240,15 +313,32 @@ const TimelineTracks: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
                     resizable={true} renderDirections={["w", "e"]} keepRatio={false} throttleResize={0}
                     snappable={true} snapDirections={{ left: true, right: true }} elementSnapDirections={{ left: true, right: true }} snapThreshold={5}
                     className="timeline-moveable"
-                    onDrag={({ target, beforeTranslate }) => { const yTransform = target.style.transform.match(/translateY\([^)]+\)/)?.[0] || 'translateY(-50%)'; target.style.transform = `translate(${beforeTranslate[0]}px, ${yTransform.includes('-50%') ? '-50%' : '0%'})`; }}
+                    onDrag={({ target, beforeTranslate }) => {
+                        const clipId = logic.projectState.selectedClipId;
+                        if (!clipId) return;
+                        let trackIndex = -1;
+                        for(let i = 0; i < logic.projectState.tracks.length; i++) {
+                            if (logic.projectState.tracks[i].clips.some(c => c.id === clipId)) {
+                                trackIndex = i;
+                                break;
+                            }
+                        }
+                        if (trackIndex === -1) return;
+                        const subtitleTrackHeight = logic.projectState.subtitles.length > 0 ? 35 : 0;
+                        const rulerHeight = 28;
+                        const trackHeight = 60;
+                        const targetY = subtitleTrackHeight + rulerHeight + trackIndex * trackHeight;
+                        target.style.transform = `translate(${beforeTranslate[0]}px, ${targetY}px)`;
+                    }}
                     onDragEnd={logic.onTimelineDragEnd}
                     onResize={logic.onTimelineResize}
                     onResizeEnd={logic.onTimelineResizeEnd}
                 />
-            </div> {/* End timeline-content-width */}
-        </div> // End timeline-scroll-container
+            </div>
+        </div>
     );
 };
+
 
 const InitialScreen: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
     const { token } = theme.useToken();
@@ -264,24 +354,25 @@ const InitialScreen: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
     );
 }
 
-const ContextualPanel: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
-    switch (logic.selectedMenuKey) {
-        case 'media': return <MediaPanel draggerProps={logic.draggerProps} editorState={logic.editorState} mediaAssets={logic.projectState.mediaAssets} />;
-        case 'text': return <TextPanel onAddTextClip={logic.handleAddTextClip} />;
-        default: return <div style={{ padding: 16, textAlign: 'center' }}><Text type="secondary">Select a tool</Text></div>;
-    }
-};
-
 // --- Main Video Editor Component ---
 const VideoEditor: React.FC = () => {
-    const logic: VideoEditorLogic = useVideoEditorLogic(); // Type assertion can help here, but is not strictly needed after hook fix
+    const logic: VideoEditorLogic = useVideoEditorLogic();
     const screens = useBreakpoint();
     const { token } = theme.useToken();
     const iconSiderWidth = 60;
-    const contextualPanelWidth = 280;
-    const propertiesPanelWidth = 280;
+    const contextualPanelWidth = 350;
+    const propertiesPanelWidth = 350;
     const timelineHeight = 180;
     const headerHeight = 56;
+
+    const srtUploadButtonProps: UploadProps = {
+        name: 'file', multiple: false, accept: '.srt,.vtt', showUploadList: false,
+        beforeUpload: (file) => { logic.handleUploadSrt(file); return false; },
+    };
+
+    const activeSubtitleInList = logic.projectState.subtitles.find(sub =>
+        logic.currentTime >= sub.startTime && logic.currentTime < sub.endTime
+    );
 
     return (
         <ConfigProvider theme={{ algorithm: theme.darkAlgorithm, token: { colorPrimary: '#7B61FF', motion: false } }}>
@@ -303,12 +394,69 @@ const VideoEditor: React.FC = () => {
                 {/* Contextual Panel Sider */}
                 {(logic.selectedMenuKey !== 'settings_footer' && !screens.xs) && (
                     <Sider width={contextualPanelWidth} theme="dark" className="contextual-sider" style={{ height: '100vh', overflow: 'hidden', zIndex: 2 }}>
-                        <ContextualPanel logic={logic} />
+                        {/* The actual content div inside the sider that gets the white background and scrolling */}
+                        {/* The CSS rules for .ant-layout-sider-children target this area */}
+                        <div className="contextual-panel-content-area"> {/* Added a class for easier targeting if needed, but ant-layout-sider-children is used in CSS */}
+                            {logic.selectedMenuKey === 'media' && (
+                                <MediaPanel draggerProps={logic.draggerProps} editorState={logic.editorState} mediaAssets={logic.projectState.mediaAssets} />
+                            )}
+                            {logic.selectedMenuKey === 'text' && (
+                                <TextPanel onAddTextClip={logic.handleAddTextClip} />
+                            )}
+                            {logic.selectedMenuKey === 'subtitles' && (
+                                <div style={{ padding: 16, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    {logic.projectState.subtitles && logic.projectState.subtitles.length > 0 ? (
+                                        <>
+                                            <div style={{marginBottom: 12, display: 'flex', flexDirection: 'column'}}>
+                                                <Title level={5} style={{ margin: '0 0 8px 0' }}>Subtitles</Title>
+                                                <Space size="small" style={{fontSize: '12px', alignItems: 'center'}}>
+                                                    <Text type="secondary">Chars per subtitle:</Text> <Text strong>92</Text>
+                                                    <Switch size="small" checked={false} disabled style={{marginLeft: 8}} />
+                                                    <Text type="secondary">Smart tools</Text>
+                                                    <Button type="text" size="small" icon={<CaretDownOutlined />} disabled />
+                                                </Space>
+                                            </div>
+                                            <div style={{ flexGrow: 1, overflowY: 'auto' }}> {/* Scrollable container for the list */}
+                                                <List itemLayout="vertical" dataSource={logic.projectState.subtitles}
+                                                      renderItem={(item: SubtitleEntry) => (
+                                                          <List.Item key={item.id} className={`subtitle-list-item ${activeSubtitleInList?.id === item.id ? 'active' : ''}`}
+                                                                     onClick={() => logic.handleTimelineSeek(item.startTime)} style={{ cursor: 'pointer' }}>
+                                                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: token.colorTextSecondary, marginBottom: 4 }}>
+                                                                  <span>{formatTime(item.startTime).slice(0, -1)}</span>
+                                                                  <span>{formatTime(item.endTime).slice(0, -1)}</span>
+                                                              </div>
+                                                              <div style={{fontSize: '14px', color: token.colorText, whiteSpace: 'pre-wrap'}}>{item.text}</div>
+                                                          </List.Item>
+                                                      )}
+                                                />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Title level={5} style={{ margin: '0 0 16px 0' }}>Add Subtitles</Title>
+                                            <Upload {...srtUploadButtonProps}>
+                                                <Card hoverable style={{ marginBottom: 16, cursor: 'pointer' }}>
+                                                    <div style={{ textAlign: 'center', padding: '8px 0' }}> <InboxOutlined style={{ fontSize: 30, color: token.colorPrimary }} /><Title level={5} style={{ margin: '8px 0 4px 0' }}>Upload SRT / VTT</Title><Text type="secondary" style={{ fontSize: 12 }}>Use a subtitle file</Text> </div>
+                                                </Card>
+                                            </Upload>
+                                            <Card hoverable style={{ cursor: 'pointer' }} onClick={logic.handleStartFromScratch}>
+                                                <div style={{ textAlign: 'center', padding: '8px 0' }}> <PlusOutlined style={{ fontSize: 30, color: token.colorPrimary }} /><Title level={5} style={{ margin: '8px 0 4px 0' }}>Start from scratch</Title><Text type="secondary" style={{ fontSize: 12 }}>Type out your subtitles</Text> </div>
+                                            </Card>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                            {!(logic.selectedMenuKey === 'media' || logic.selectedMenuKey === 'text' || logic.selectedMenuKey === 'subtitles') && (
+                                <div style={{ padding: 16, textAlign: 'center' }}><Text type="secondary">Select a tool</Text></div>
+                            )}
+                        </div>
                     </Sider>
                 )}
 
-                {/* Main Application Layout */}
-                <Layout style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+                {/* Main Content Area (Header, Preview, Properties) + Timeline Footer */}
+                {/* **MODIFICATION 4: Add paddingBottom to make space for the fixed timeline footer** */}
+                {/* **MODIFICATION 4: This Layout's height is flexGrow: 1, allowing Preview/Properties to take space** */}
+                <Layout style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: timelineHeight }}> {/* Add padding here */}
                     {/* Header */}
                     <Header style={{ padding: '0 16px 0 20px', height: headerHeight, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1, flexShrink: 0 }}>
                         <Space size="middle">
@@ -331,38 +479,48 @@ const VideoEditor: React.FC = () => {
                         </Space>
                     </Header>
 
-                    {/* Center Area */}
+                    {/* Center Area (Preview + Properties) - Takes remaining vertical space, flows horizontally */}
+                    {/* **MODIFICATION 4: This Layout's height is also flexGrow: 1, allowing Preview/Properties to take space** */}
                     <Layout style={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
-                        <div style={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        {/* Preview Area - Takes remaining horizontal space */}
+                        <Content style={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                             {logic.editorState === 'initial' || (logic.editorState === 'uploading' && logic.projectState.mediaAssets.length === 0)
                                 ? <InitialScreen logic={logic} />
                                 : <PreviewArea logic={logic} />
                             }
-                        </div>
+                        </Content>
+                        {/* Properties Panel */}
                         {logic.editorState === 'editor' && !screens.xs && (
+                            // **MODIFICATION 3: Use increased width**
+                            // **MODIFICATION 4: Sider height is naturally limited by parent Layout flexGrow**
                             <Sider width={propertiesPanelWidth} theme="dark" className="properties-sider" style={{ height: '100%', overflow: 'hidden', flexShrink: 0 }}>
-                                <PropertiesPanel
-                                    selectedClip={logic.selectedClip}
-                                    currentTime={logic.currentTime}
-                                    updateSelectedClipProperty={logic.updateSelectedClipProperty}
-                                    updateSelectedClipText={logic.updateSelectedClipText}
-                                    addOrUpdateKeyframe={logic.addOrUpdateKeyframe}
-                                    onDeleteClip={logic.handleDeleteClip}
-                                />
+                                {/* The actual content div inside the sider that gets the white background and scrolling */}
+                                {/* The CSS rules for .ant-layout-sider-children target this area */}
+                                <div className="properties-panel-content-area"> {/* Added a class for easier targeting if needed */}
+                                    <PropertiesPanel
+                                        selectedClip={logic.selectedClip}
+                                        currentTime={logic.currentTime}
+                                        updateSelectedClipProperty={logic.updateSelectedClipProperty}
+                                        updateSelectedClipText={logic.updateSelectedClipText}
+                                        addOrUpdateKeyframe={logic.addOrUpdateKeyframe}
+                                        onDeleteClip={logic.handleDeleteClip}
+                                    />
+                                </div>
                             </Sider>
                         )}
                     </Layout>
 
-                    {/* Timeline Footer */}
+                    {/* Timeline Footer - Fixed height at the bottom */}
+                    {/* **MODIFICATION 4: Footer is positioned fixed, overlapping content below** */}
                     {logic.editorState === 'editor' && (
                         <Footer className="timeline-footer" style={{ padding: 0, height: timelineHeight, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
                             <TimelineControls logic={logic} screens={screens} />
                             <TimelineTracks logic={logic} />
                         </Footer>
                     )}
-                </Layout>
+                </Layout> {/* End Nested Layout for Main Content + Timeline */}
 
-                {/* Mobile Drawer */}
+                {/* Mobile Drawer - Sibling to the main Layout, correctly placed */}
                 <Drawer
                     title="Menu" placement="left" closable={true} onClose={logic.closeMobileDrawer}
                     open={logic.mobileDrawerVisible && screens.xs} width={250}
@@ -376,7 +534,7 @@ const VideoEditor: React.FC = () => {
                         mode="vertical"
                     />
                 </Drawer>
-            </Layout>
+            </Layout> {/* End Main Layout */}
         </ConfigProvider>
     );
 };
