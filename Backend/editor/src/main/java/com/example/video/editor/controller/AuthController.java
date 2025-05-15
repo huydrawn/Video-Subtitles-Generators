@@ -18,7 +18,7 @@ import com.example.video.editor.service.UserService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/public/auth")
 public class AuthController {
 	@Autowired
 	private UserService userService;

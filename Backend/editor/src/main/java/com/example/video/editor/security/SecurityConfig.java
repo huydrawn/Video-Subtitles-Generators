@@ -16,6 +16,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.example.video.editor.config.constant.SecurityConstants;
 import com.example.video.editor.security.filter.JwtAuthenticationFilter;
 import com.example.video.editor.security.oauth.CustomOAuth2SuccessHandler;
 import com.example.video.editor.service.CustomUserDetailsService;
@@ -28,7 +29,7 @@ public class SecurityConfig {
 	private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
-    private final PasswordEncoder passwordEncoder;
+    
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
@@ -38,7 +39,7 @@ public class SecurityConfig {
     public AuthenticationProvider daoAuthenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
+        provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
 	@Bean
@@ -51,7 +52,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/public/**", "/oauth2/**", "/sub/**")
+                        .requestMatchers(SecurityConstants.PUBLIC_URLS.toArray(new String[0]))
                         .permitAll()
                         .anyRequest()
                         .authenticated()

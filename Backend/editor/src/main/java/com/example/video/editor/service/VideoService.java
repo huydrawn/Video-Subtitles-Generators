@@ -1,5 +1,7 @@
 package com.example.video.editor.service;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -7,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.cloudinary.Cloudinary;
+import com.cloudinary.Transformation;
 import com.cloudinary.utils.ObjectUtils;
 import com.example.video.editor.model.Video;
 import com.example.video.editor.repository.VideoRepository;
@@ -21,25 +24,43 @@ public class VideoService {
     private final Cloudinary cloudinary; // Inject Cloudinary bean
 
     public Video uploadVideoToCloudinary(MultipartFile file, String title) throws IOException {
-        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                "resource_type", "video",
-                "folder", "video_editor" // Optional: Thư mục trên Cloudinary
-        ));
+    	Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+    	        "resource_type", "video",
+    	        "folder", "video_editor",
+    	        "eager", Arrays.asList(
+    	            ObjectUtils.asMap(
+    	                "format", "jpg",
+    	                "transformation", new Transformation()
+    	                    .width(300)
+    	                    .height(200)
+    	                    .crop("fill")
+    	                    .startOffset("5") // snapshot từ giây thứ 5
+    	            )
+    	        )
+    	    ));
 
-        Video video = Video.builder()
-                .title(title)
-                .cloudinaryPublicId((String) uploadResult.get("public_id"))
-                .url((String) uploadResult.get("url"))
-                .secureUrl((String) uploadResult.get("secure_url"))
-                .resourceType((String) uploadResult.get("resource_type"))
-                .format((String) uploadResult.get("format"))
-                .duration(((Number) uploadResult.get("duration")).floatValue())
-                .bytes(((Number) uploadResult.get("bytes")).longValue())
-                .width((Integer) uploadResult.get("width"))
-                .height((Integer) uploadResult.get("height"))
-                .build();
+    	    // Eager result chứa thông tin thumbnail ảnh
+    	    List<Map<String, Object>> eagerList = (List<Map<String, Object>>) uploadResult.get("eager");
+    	    String thumbnailUrl = null;
+    	    if (eagerList != null && !eagerList.isEmpty()) {
+    	        thumbnailUrl = (String) eagerList.get(0).get("secure_url");
+    	    }
 
-        return videoRepository.save(video);
+    	    Video video = Video.builder()
+    	        .title(title)
+    	        .cloudinaryPublicId((String) uploadResult.get("public_id"))
+    	        .url((String) uploadResult.get("url"))
+    	        .secureUrl((String) uploadResult.get("secure_url"))
+    	        .resourceType((String) uploadResult.get("resource_type"))
+    	        .format((String) uploadResult.get("format"))
+    	        .duration(((Number) uploadResult.get("duration")).floatValue())
+    	        .bytes(((Number) uploadResult.get("bytes")).longValue())
+    	        .width((Integer) uploadResult.get("width"))
+    	        .height((Integer) uploadResult.get("height"))
+    	        .thumbnailUrl(thumbnailUrl) // Cần thêm field thumbnailUrl trong entity nếu muốn lưu
+    	        .build();
+
+    	    return videoRepository.save(video);
     }
 
     public Optional<Video> getVideoById(Long id) {

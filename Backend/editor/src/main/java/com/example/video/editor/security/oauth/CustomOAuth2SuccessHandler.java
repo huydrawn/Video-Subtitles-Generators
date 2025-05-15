@@ -9,8 +9,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import com.example.video.editor.model.SecurityUser;
 import com.example.video.editor.model.User;
-import com.example.video.editor.model.UserDetailsImpl;
 import com.example.video.editor.repository.UserRepository;
 import com.example.video.editor.security.jwt.JwtService;
 
@@ -41,7 +41,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         });
 
         // Tạo UserDetailsImpl từ User
-        UserDetailsImpl userDetails = UserDetailsImpl.build(dbUser);
+        SecurityUser userDetails = SecurityUser.build(dbUser);
 
         // Tạo JWT bằng UserDetails
         String jwt = jwtService.generateToken(userDetails);

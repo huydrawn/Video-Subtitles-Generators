@@ -39,10 +39,9 @@ public class FileUploadService extends ProgressTask {
 			progressCallback.accept(10, "Đã tìm thấy Project");
 
 			// Tải video lên Cloudinary
-			Video video = videoService.uploadVideoToCloudinary(file, file.getOriginalFilename());
+			savedVideo = videoService.uploadVideoToCloudinary(file, file.getOriginalFilename());
 			progressCallback.accept(70, "Tải video lên Cloudinary thành công");
 
-			savedVideo = videoRepository.save(video);
 			progressCallback.accept(90, "Lưu thông tin video vào database thành công");
 			completeCallback.accept(savedVideo, "Xử lý video hoàn tất");
 

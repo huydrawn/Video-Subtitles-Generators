@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.video.editor.dto.WorkspaceCreationRequest;
 import com.example.video.editor.exception.NotFoundException;
+import com.example.video.editor.model.SecurityUser;
 import com.example.video.editor.model.User;
 import com.example.video.editor.service.UserService;
 
@@ -24,14 +25,14 @@ public class UserController {
 
 	private final UserService userService;
 
-	@PostMapping("/{userId}/workspace")
-	public ResponseEntity<User> createWorkspaceForUser(@PathVariable Long userId,
-			@RequestBody WorkspaceCreationRequest request, @AuthenticationPrincipal UserDetails userDetails)
+	@PostMapping("/workspace")
+	public ResponseEntity<?> createWorkspaceForUser(
+			@RequestBody WorkspaceCreationRequest request, @AuthenticationPrincipal SecurityUser securityUser)
 			throws NotFoundException {
 		
-		User updatedUser = userService.createWorkspaceForUser(userId, request.getWorkspaceName(),
+		var dto = userService.createWorkspaceForUser(securityUser.getUserId(), request.getWorkspaceName(),
 				request.getDescription());
-		return new ResponseEntity<>(updatedUser, HttpStatus.CREATED);
+		return new ResponseEntity<>(dto, HttpStatus.CREATED);
 	}
 
 	// Các API khác liên quan đến User

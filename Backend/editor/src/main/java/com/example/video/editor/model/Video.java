@@ -31,6 +31,8 @@ public class Video {
 
     @Column(name = "url", nullable = false, length = 2048)
     private String url;
+    
+    private String thumbnailUrl;
 
     @Column(name = "secure_url", nullable = false, length = 2048)
     private String secureUrl;
