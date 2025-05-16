@@ -1,23 +1,41 @@
-/* **Modified videoeditor.css** */
+/* videoeditor.css */
 
-body {
-    background-color: #141414; /* Ant dark bg */
-    color: rgba(255, 255, 255, 0.85); /* Ant dark text */
-    overflow: hidden; /* Prevent body scroll */
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+/* Base Ant Layout override */
+.ant-layout {
+    background-color: transparent !important;
 }
 
 /* Main Layout - Use transparent backgrounds, rely on ConfigProvider */
-/* Removed background-color: transparent from here to allow specific siders to set their own */
+/* This layout is the main flex container for the left sider and the main content layout */
 .video-editor-layout {
     background-color: transparent; /* Base layout can be transparent */
     /* Use display: flex and flex-direction: row here if the main structure is Sider + Layout */
+    /* This rule wasn't strictly necessary, the nested layout handles flex-direction */
 }
-.video-editor-layout > .ant-layout { /* Target the main content Layout */
+.video-editor-layout > .ant-layout { /* Target the main content Layout (Header, Preview+Props, Footer) */
     display: flex;
     flex-direction: column;
     flex-grow: 1; /* Allow main content layout to take remaining space */
     overflow: hidden; /* Hide its own overflow */
+}
+
+/* --- Style for the Layout containing Preview and Properties --- */
+.video-editor-main-center-layout { /* Add this new class to the Layout in React */
+    position: relative; /* Make this the positioning context for absolute children */
+    flex-grow: 1; /* Ensure it takes remaining vertical space */
+    overflow: hidden; /* Hide any overflow from children */
+    /* Removed display: flex; flex-direction: row; as they are overridden by absolute children */
+}
+
+/* --- Style for the Preview Content area --- */
+.video-editor-preview-content { /* Add this new class to the Content in React */
+    position: absolute; /* Position absolutely within the relative parent */
+    inset: 0; /* Stretch to fill the parent (top, right, bottom, left = 0) */
+    /* Removed flex-grow: 1; as it's not needed with absolute positioning */
+    overflow: hidden; /* Hide preview overflow */
+    display: flex; /* Keep flex for its children (preview header, preview container) */
+    flex-direction: column; /* Stack children vertically */
+    z-index: 3; /* Behind properties sider (will be z-index 4) */
 }
 
 
@@ -28,6 +46,8 @@ body {
     height: 56px; /* Revert to original header height */
     padding: 0 16px 0 20px; /* Revert to original header padding */
     flex-shrink: 0; /* Prevent shrinking */
+    z-index: 4; /* Keep header above absolute content below it */
+    position: relative; /* Needed for z-index to work correctly against absolute elements */
 }
 .video-editor-layout .preview-header {
     background-color: #1f1f1f;
@@ -35,61 +55,102 @@ body {
     height: 40px; /* Reduced height */
     padding: 0 12px; /* Reduced padding */
     flex-shrink: 0; /* Prevent shrinking */
+    z-index: 1; /* Keep header above the preview container */
+    position: relative; /* Needed for z-index */
 }
 .video-editor-layout .preview-container {
     background-color: #000000;
     margin: 0;
-    flex-grow: 1; /* Take available space */
-    position: relative; /* Needed for absolutely positioned canvas/moveable */
+    flex-grow: 1; /* Take available space within the preview content flex column */
+    position: relative; /* Needed for absolutely positioned canvas/moveable/subtitles */
     overflow: hidden; /* Hide potential overflow */
+    z-index: 0; /* Default z-index */
 }
-/* Style for the subtitle text overlay on the preview */
-.preview-subtitle-overlay {
-    color: white;
-    background-color: rgba(0,0,0,0.7);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 18px; /* Adjust size as needed */
-    text-align: center;
-    z-index: 5;
-    pointer-events: none;
-    white-space: pre-wrap;
-    text-shadow: 0px 0px 2px rgba(0,0,0,0.5);
-    line-height: 1.4;
-    max-width: 80%;
-    /* Position is handled inline */
+
+/* --- Styles for the Subtitle Text Overlay on the Preview --- */
+.preview-container .subtitle-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: flex-end; /* Align to the bottom */
+    padding-bottom: 24px; /* Offset from the bottom edge */
+    pointer-events: none; /* Allow clicks to pass through to elements below */
+    z-index: 5; /* Above the preview canvas (0) */
+}
+
+.preview-container .subtitle-overlay .subtitle-text {
+    background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black background */
+    color: white; /* White text color */
+    padding: 6px 12px; /* Padding around the text */
+    border-radius: 4px; /* Rounded corners */
+    font-size: 18px; /* Font size */
+    text-align: center; /* Center text within the bubble */
+    max-width: 80%; /* Limit max width */
+    word-wrap: break-word; /* Break long words */
+    white-space: pre-wrap; /* Respect line breaks in the subtitle text */
+    pointer-events: auto; /* Allow pointer events on the bubble itself if needed for selection/moveable */
+    user-select: none; /* Prevent text selection */
 }
 
 /* Default sider styles (for icon sider) */
 .video-editor-layout .ant-layout-sider {
     border-right: 1px solid #303030;
     background-color: #1f1f1f; /* Default dark background */
+    z-index: 3; /* Keep left sider in front of main content layout if needed */
 }
 
-/* --- MODIFICATION 2 & 3: Sider Background & Text Colors --- */
-/* Target contextual and properties siders */
-.video-editor-layout .contextual-sider {
-    border-right: 1px solid #303030; /* Keep separator */
-    background-color: transparent !important; /* Let inner content set background */
-}
-.video-editor-layout .properties-sider {
+/* --- Style for the Properties Sider --- */
+/* Anchored to the right edge (right: 0) */
+.video-editor-layout .properties-sider { /* Keep existing class */
     border-left: 1px solid #303030; /* Keep separator */
     border-right: none;
     background-color: transparent !important; /* Let inner content set background */
+    position: absolute; /* Position absolutely within the relative parent */
+    right: 0; /* Anchor to the right edge */
+    top: 0; /* Anchor to the top edge of the relative container */
+    bottom: 0; /* Anchor to the bottom edge of the relative container */
+    flex-shrink: 0; /* Prevent shrinking */
+    z-index: 4; /* Higher than preview content (z-index 3) */
+    /* The width of the sider should be controlled by the Ant Design Sider component's 'width' prop (e.g., 300px) */
+    min-width: 220px;
+    max-width: 220px;
+    width: 220px;
+
 }
 
 /* Target the content wrapper inside specific siders */
 /* Use .ant-layout-sider-children directly as it's the scrollable container */
+/* MODIFIED: Set background back to white for the scrollable container */
 .contextual-sider .ant-layout-sider-children,
 .properties-sider .ant-layout-sider-children {
-    background-color: white !important; /* Set white background */
+    background-color: white !important; /* Set white background for the scrollable container */
     color: black !important; /* Set base text color to black */
     overflow-y: auto; /* Ensure scrolling works within the white area */
     height: 100%; /* Ensure children fill the sider's height */
     display: flex; /* Use flex column for inner layout */
     flex-direction: column; /* Stack content vertically */
-    /* padding applied inside the components (MediaPanel, PropertiesPanel) */
+    /* Removed width:300px; - Sider component should define width */
+
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgba(0, 0, 0, 0.4) rgba(0, 0, 0, 0.1); /* Firefox thumb track for white background */
 }
+
+/* Webkit Scrollbars for sider content */
+.contextual-sider .ant-layout-sider-children::-webkit-scrollbar,
+.properties-sider .ant-layout-sider-children::-webkit-scrollbar { width: 8px; }
+.contextual-sider .ant-layout-sider-children::-webkit-scrollbar-track,
+.properties-sider .ant-layout-sider-children::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); } /* Very light track */
+.contextual-sider .ant-layout-sider-children::-webkit-scrollbar-thumb,
+.properties-sider .ant-layout-sider-children::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.3); /* Darker thumb for light background */
+    border-radius: 4px;
+    border: 2px solid rgba(0, 0, 0, 0.05); /* Match track background */
+}
+
 
 /* Ensure Ant Design typography elements inherit black color within these siders */
 .contextual-sider .ant-typography,
@@ -106,7 +167,9 @@ body {
 .contextual-sider .ant-input,
 .properties-sider .ant-input,
 .contextual-sider .ant-input-number-input,
-.properties-sider .ant-input-number-input {
+.properties-sider .ant-input-number-input,
+.contextual-sider .ant-input-affix-wrapper,
+.properties-sider .ant-input-affix-wrapper {
     background-color: white !important;
     color: black !important;
     border-color: #d9d9d9 !important; /* Standard light theme border */
@@ -116,6 +179,9 @@ body {
 .properties-sider .ant-input::placeholder {
     color: rgba(0, 0, 0, 0.45); /* Standard Antd placeholder color for light theme */
 }
+/* Input prefixes like X, Y */
+.properties-sider .ant-input-prefix { color: rgba(0,0,0,0.65) !important; }
+
 
 /* Ensure Selects look correct on a white background */
 .contextual-sider .ant-select-selector,
@@ -186,27 +252,40 @@ body {
     border-color: #7B61FF !important;
     color: white !important;
 }
-/* --- End MODIFICATION 2 & 3 --- */
+
+/* Ensure Segmented looks correct on a white background */
+.properties-sider .ant-segmented {
+    background-color: rgba(0, 0, 0, 0.05) !important; /* Light grey background */
+}
+.properties-sider .ant-segmented-item-selected {
+    background-color: #7B61FF !important; /* Primary color background for selected */
+    color: white !important; /* White text for selected */
+}
+.properties-sider .ant-segmented-item {
+    color: black !important; /* Black text for non-selected items */
+}
+
+/* Ensure Button Group looks correct */
+.properties-sider .ant-btn-group .ant-btn {
+    border-color: #d9d9d9 !important; /* Standard light theme border */
+    color: black !important; /* Black text for buttons */
+    background-color: white !important; /* White background */
+}
+.properties-sider .ant-btn-group .ant-btn:not(:first-child)::before {
+    background-color: #d9d9d9 !important; /* Border between buttons */
+}
 
 
 /* Keep the InitialScreen card dark - Ensure these styles are specific enough */
-.initial-screen-content .initial-screen-card {
-    background-color: #1f1f1f !important; /* Ensure it stays dark */
-    color: white !important;
-}
-.initial-screen-content .initial-screen-card .ant-typography {
-    color: white !important;
-}
-.initial-screen-content .initial-screen-dragger .ant-upload-text,
-.initial-screen-content .initial-screen-dragger .ant-upload-hint {
-    color: rgba(255, 255, 255, 0.85) !important;
-}
-.initial-screen-content .initial-screen-dragger .ant-upload-drag-icon .anticon {
-    color: #7B61FF !important; /* Keep primary color for icon */
-}
-.initial-screen-content .initial-screen-dragger.ant-upload-drag {
-    border-color: #444 !important; /* Keep dark border */
-}
+.initial-screen-content { background-color: #141414; }
+.initial-screen-card { background-color: #1f1f1f; border: 1px solid #303030; width: 100%; max-width: 450px; }
+.initial-screen-card .ant-card-body { padding: 24px; }
+.initial-screen-card .ant-typography { color: rgba(255, 255, 255, 0.85); }
+.initial-screen-dragger .ant-upload-drag { background: #2a2a2a; border-color: #444; padding: 20px; }
+.initial-screen-dragger .ant-upload-drag:hover { border-color: #1677ff; }
+.initial-screen-dragger .ant-upload-drag-icon .anticon { color: #1677ff; font-size: 36px;}
+.initial-screen-dragger .ant-upload-text { color: rgba(255, 255, 255, 0.85); }
+.initial-screen-dragger .ant-upload-hint { color: rgba(255, 255, 255, 0.45); font-size: 12px;}
 
 
 /* Mobile Drawer Styles */
@@ -225,7 +304,7 @@ body {
 }
 
 
-/* Menu styling */
+/* Menu styling (for Left Sider) */
 .main-menu .ant-menu-item {
     height: 48px !important;
     width: 100% !important; /* Full width in vertical */
@@ -251,7 +330,7 @@ body {
     background-color: rgba(255, 255, 255, 0.1) !important; /* Equivalent to colorFillSecondary */
 }
 
-/* Contextual Panel Specific Styles */
+/* Contextual Panel Specific Styles (for Left Sider Content) */
 .contextual-panel-content-area { /* Target div inside sider */
     padding: 16px; /* Apply padding here */
     height: 100%; /* Fill parent height */
@@ -269,13 +348,46 @@ body {
 }
 .media-panel-content,
 .subtitles-panel-content { /* Class for media/subtitles content area */
-    /* padding: 12px; /* Removed padding here, applied to parent .contextual-panel-content-area */
     overflow-y: auto; /* Enable scrolling for content *within* the panel */
     flex-grow: 1; /* Take available vertical space within the flex column */
-    /* Background color is handled by parent .ant-layout-sider-children */
+    /* Background color is handled by parent .ant-layout-sider-children (set to white above) */
+
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgba(0, 0, 0, 0.4) rgba(0, 0, 0, 0.1); /* Firefox thumb track for white background */
 }
+/* Webkit Scrollbars for media/subtitles content */
+.media-panel-content::-webkit-scrollbar,
+.subtitles-panel-content::-webkit-scrollbar { width: 8px; }
+.media-panel-content::-webkit-scrollbar-track,
+.subtitles-panel-content::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); } /* Very light track */
+.media-panel-content::-webkit-scrollbar-thumb,
+.subtitles-panel-content::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.3); /* Darker thumb for light background */
+    border-radius: 4px;
+    border: 2px solid rgba(0, 0, 0, 0.05); /* Match track background */
+}
+
+/* --- Subtitle Search Styles --- */
+.subtitle-search-area {
+    margin-bottom: 12px;
+    padding: 0 0 8px 0; /* Space below search */
+    border-bottom: 1px solid #eee; /* Separator below search bar */
+}
+
+.subtitle-search-area .ant-input-affix-wrapper {
+    margin-bottom: 8px; /* Space between input and count */
+}
+
+/* Style for highlighted text within subtitle list item */
+.subtitle-highlight {
+    font-weight: bold;
+    /* background-color: yellow; Optional: add a subtle background */
+    /* color: inherit; Ensure color is inherited from parent text */
+}
+
+
 .media-asset-card {
-    /* Background, border, text color now handled by rules for cards within siders */
+    /* Background, border, text color now handled by rules for cards within siders (set to white background) */
 }
 .media-asset-card .ant-card-body {
     padding: 6px !important;
@@ -299,9 +411,14 @@ body {
     position: relative; /* Needed for absolute positioning of buttons */
 }
 
-.subtitles-panel-content .subtitle-list-item.active {
+.subtitles-panel-content .subtitle-list-item.active-time {
     background-color: #FFFFE0 !important; /* Light yellow background from screenshot */
 }
+.subtitles-panel-content .subtitle-list-item.selected-list {
+    outline: 1px solid #7B61FF; /* Use primary color for selection highlight */
+    background-color: rgba(123, 97, 255, 0.1) !important; /* Subtle background */
+}
+
 
 /* Styles for the Add/Merge buttons (Optional, based on screenshot) */
 .subtitle-actions {
@@ -315,8 +432,10 @@ body {
     opacity: 0;
     transition: opacity 0.2s ease;
 }
+/* Show actions on hover or when selected (either by time or by list item click) */
 .subtitle-list-item:hover .subtitle-actions,
-.subtitle-list-item.active .subtitle-actions {
+.subtitle-list-item.active-time .subtitle-actions,
+.subtitles-panel-content .subtitle-list-item.selected-list .subtitle-actions {
     opacity: 1;
 }
 .subtitle-actions .ant-btn-sm {
@@ -327,40 +446,99 @@ body {
 
 
 /* Properties Panel Specific Styles */
-.properties-panel-content-area { /* Target div inside sider */
+/* MODIFIED: Removed margin and width, kept padding */
+.properties-panel-content { /* This class is now on the inner div with padding */
     padding: 16px; /* Apply padding here */
     height: 100%; /* Fill parent height */
-    overflow-y: auto; /* Enable scrolling for content *within* the panel */
-    /* overflow handled by parent .ant-layout-sider-children */
+    flex-grow: 1; /* Take available vertical space within the flex column */
+    /* Removed width: 300px; */
+    /* Removed margin-left: 100px; */
+    /* Removed overflow-y and display/flex-direction - handled by parent .ant-layout-sider-children */
 }
-/* Typography, Input, Select, Slider mark text color handled by general rules above */
+
+/* Styles for color preset swatches */
+.properties-panel-content .color-preset {
+    width: 20px; /* Size */
+    height: 20px; /* Size */
+    border-radius: 4px; /* Slightly rounded corners */
+    border: 1px solid #d9d9d9; /* Light border */
+    cursor: pointer; /* Indicate clickable */
+    box-sizing: border-box; /* Include border in size */
+    display: inline-block; /* Treat as inline block for grid layout */
+}
+
+/* Ensure Typography looks correct on a white background (covered by general sider rules) */
+/* Ensure Inputs look correct on a white background (covered by general sider rules) */
+/* Ensure Selects look correct on a white background (covered by general sider rules) */
+/* Ensure Buttons/Segmented look correct on a white background (covered by general sider rules) */
+
+/* Ensure Sliders look correct on a white background */
+.properties-sider .ant-slider-track {
+    background-color: #7B61FF !important; /* Primary color track */
+}
+.properties-sider .ant-slider-handle {
+    border-color: #7B61FF !important; /* Primary color handle border */
+}
+.properties-sider .ant-slider-dot {
+    border-color: #7B61FF !important; /* Primary color dot border */
+    background-color: #fff !important; /* White dot background */
+}
+.properties-sider .ant-slider-rail {
+    background-color: #e8e8e8 !important; /* Light grey rail */
+}
+.properties-sider .ant-slider-disabled .ant-slider-track {
+    background-color: rgba(0, 0, 0, 0.25) !important; /* Disabled track color */
+}
+.properties-sider .ant-slider-disabled .ant-slider-handle {
+    border-color: rgba(0, 0, 0, 0.25) !important; /* Disabled handle border */
+}
+.properties-sider .ant-slider-disabled .ant-slider-dot {
+    border-color: rgba(0, 0, 0, 0.25) !important; /* Disabled dot border */
+}
+.properties-sider .ant-slider-disabled .ant-slider-rail {
+    background-color: rgba(0, 0, 0, 0.05) !important; /* Disabled rail color */
+}
+
+/* Ensure ColorPicker looks correct on a white background */
+.properties-sider .ant-color-picker-trigger {
+    border-color: #d9d9d9 !important; /* Standard light theme border */
+    background: white !important;
+}
+.properties-sider .ant-color-picker-trigger-block {
+    border-color: #d9d9d9 !important; /* Standard light theme border */
+}
+
+/* Ensure Dividers match the screenshot (grey) */
+.properties-panel-content .ant-divider {
+    border-color: #e8e8e8 !important; /* Use a light grey */
+    margin: 24px 0 16px 0 !important; /* Set margin as in the screenshot transitions */
+}
+
+/* Adjust Reset button color (covered by general sider rules for ant-btn-link) */
+/* The original rule properties-panel-content .ant-btn-link .ant-typography-secondary is too specific.
+   The general .properties-sider .ant-btn-text or .properties-sider .ant-typography-secondary rules should handle this if applied correctly to the reset text/button.
+   Let's rely on the general rules defined earlier. */
+/* properties-panel-content .ant-btn-link .ant-typography-secondary { color: rgba(0, 0, 0, 0.65) !important; } */
+
+
+/* Typography, Input, Select font size adjustments */
 .properties-panel-content .ant-input-number-input,
-.properties-panel-content .ant-input {
+.properties-panel-content .ant-input,
+.properties-panel-content .ant-select-selector {
     font-size: 13px;
 }
-.properties-panel-content .ant-divider {
-    border-color: #424242; /* Keep dark divider color */
-    margin: 12px 0;
-}
+/* Section Header style */
 .properties-section-header {
     margin-top: 16px;
     margin-bottom: 8px;
     font-weight: 500;
     text-transform: uppercase;
     font-size: 11px;
+    color: rgba(0,0,0,0.85); /* Explicitly set color for section headers */
 }
-.color-picker-placeholder {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 1px solid #424242; /* Keep dark border */
-    border-radius: 4px;
-    margin-left: 8px;
-    vertical-align: middle;
-    cursor: pointer;
-}
+
 .properties-panel-content .ant-row {
-    margin-bottom: 6px;
+    margin-bottom: 6px; /* Adjust row spacing */
 }
 .properties-panel-content .ant-slider {
     margin-top: 2px;
@@ -369,13 +547,13 @@ body {
 
 
 /* Timeline */
-/* **MODIFICATION 4: Position fixed, cover full width at bottom, higher z-index** */
+/* Position fixed, cover full width at bottom, higher z-index */
 .timeline-footer {
     position: fixed; /* Position relative to viewport */
     bottom: 0; /* Anchor to the bottom */
     left: 0; /* Anchor to the left */
     right: 0; /* Anchor to the right - makes it span full width */
-    z-index: 5; /* Higher than siders (z-index 2) and main Layout (z-index 1) */
+    z-index: 5; /* Higher than siders (z-index 3/4) and main Layout (z-index 1/3) */
 
     height: 180px; /* Fixed height as defined in React component */
     display: flex;
@@ -384,7 +562,6 @@ body {
 
     border-top: 1px solid #303030; /* Dark theme border */
     background-color: #1f1f1f; /* Consistent bg */
-    /* Padding is now handled on the content *above* the footer */
     padding: 0; /* Remove padding */
 }
 
@@ -459,8 +636,7 @@ body {
     margin-top: -15px !important; border: none !important; background: transparent !important;
     box-shadow: none !important; cursor: col-resize !important;
 }
-/* --- MODIFICATION 1: Set the color for the track --- */
-/* Removed !important */
+/* Set the color for the track */
 .timeline-seek-slider .ant-slider-track {
     background: #7B61FF; /* Theme primary color */
 }
@@ -490,20 +666,27 @@ body {
 
 /* Style for individual subtitle clips within the timeline track */
 .timeline-subtitle {
-    position: absolute; top: 2px; bottom: 2px;
+    position: absolute; top: 2px; bottom: 2px; /* Vertically centered with 2px top/bottom offset */
     border-radius: 2px; cursor: pointer; box-sizing: border-box; border: 1px solid transparent;
     transition: background-color 0.1s ease, border-color 0.1s ease; user-select: none;
-    color: white; font-size: 10px; display: flex; align-items: center;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; line-height: 30px;
-    background-color: #FFB200; border-color: #FFD572;
-    z-index: 20;
+    color: white; font-size: 10px; display: flex; align-items: center; /* Center text vertically */
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; /* CORRECTED TYPO HERE */
+    padding: 0 4px;
+    background-color: #FFB200; border-color: #FFD572; /* Default non-selected color */
+    z-index: 20; /* Below playhead (25), above regular clips (5-10) */
+    /* Left and Width are set inline */
 }
 .timeline-subtitle:hover { background-color: #FFA500; }
-.timeline-subtitle.active {
-    background-color: rgba(123, 97, 255, 0.8) !important;
-    border-color: #7B61FF !important;
-    z-index: 25;
+.timeline-subtitle.active-time { /* Style for subtitle active at current time */
+    background-color: #FFD572; /* Lighter color for active */
 }
+.timeline-subtitle.selected-timeline { /* Style for subtitle selected in UI */
+    background-color: rgba(123, 97, 255, 0.8) !important; /* Primary color background */
+    border-color: #7B61FF !important; /* Primary color border */
+    z-index: 26; /* Higher z-index when selected, above playhead */
+}
+
 
 /* Existing Track Styles */
 .timeline-track {
@@ -525,9 +708,9 @@ body {
     position: absolute; height: 48px; top: 50%; transform: translateY(-50%);
     border: 1px solid #555; border-radius: 4px; background-color: #333; overflow: hidden;
     cursor: grab; display: flex; align-items: center; transition: border-color 0.1s, box-shadow 0.1s;
-    z-index: 5;
+    z-index: 5; /* Below subtitles */
 }
-.timeline-clip.selected { border-color: #1677ff; box-shadow: 0 0 0 1px #1677ff; z-index: 10; }
+.timeline-clip.selected { border-color: #1677ff; box-shadow: 0 0 0 1px #1677ff; z-index: 10; /* Higher when selected */ }
 .timeline-clip:active { cursor: grabbing; }
 .clip-thumbnail-container { position: absolute; inset: 0; display: flex; z-index: 1; }
 .clip-thumbnail-segment { position: absolute; top: 0; bottom: 0; background-size: cover; background-position: center center; background-repeat: no-repeat; }
@@ -539,25 +722,20 @@ body {
 .clip-info-overlay .ant-typography { color: #fff; flex-grow: 1; line-height: 1.2; }
 
 /* Style for Moveable target on preview */
+/* This target div is used for *clips* specifically */
 .moveable-target-preview {
-    border: 1px solid #1677ff; box-shadow: 0 0 4px rgba(22, 119, 255, 0.4);
-    background: rgba(22, 119, 255, 0.05); position: absolute;
+    /* Border and shadow from Moveable will be applied */
+    background: rgba(22, 119, 255, 0.05); /* Subtle blue background */
+    position: absolute; /* Required by Moveable */
+    box-sizing: border-box; /* Include border in size */
+    /* Position and size handled inline by useEffect for clips */
+    z-index: 10; /* Higher than the preview canvas and subtitle overlay */
 }
+
 /* Style for Moveable controls on preview */
 .preview-moveable .moveable-control { background: #fff !important; border: 1px solid #1677ff !important; border-radius: 50% !important; width: 10px !important; height: 10px !important; }
 .preview-moveable .moveable-rotation-control{ border: 1px solid #1677ff !important; background: #fff !important; width: 14px !important; height: 14px !important; }
 .preview-moveable .moveable-line.moveable-direction { background: #1677ff !important; height: 1px !important; width: 1px !important; }
-
-/* Initial Screen */
-.initial-screen-content { background-color: #141414; }
-.initial-screen-card { background-color: #1f1f1f; border: 1px solid #303030; width: 100%; max-width: 450px; }
-.initial-screen-card .ant-card-body { padding: 24px; }
-.initial-screen-card .ant-typography { color: rgba(255, 255, 255, 0.85); }
-.initial-screen-dragger .ant-upload-drag { background: #2a2a2a; border-color: #444; padding: 20px; }
-.initial-screen-dragger .ant-upload-drag:hover { border-color: #1677ff; }
-.initial-screen-dragger .ant-upload-drag-icon .anticon { color: #1677ff; font-size: 36px;}
-.initial-screen-dragger .ant-upload-text { color: rgba(255, 255, 255, 0.85); }
-.initial-screen-dragger .ant-upload-hint { color: rgba(255, 255, 255, 0.45); font-size: 12px;}
 
 
 /* Timeline Clip Styles (Ensure text clips are handled) */
@@ -568,6 +746,10 @@ body {
     background: #7B61FF; color: white; border: none;
     display: flex; align-items: center; justify-content: center;
 }
+/* Ensure clip-info-overlay text color is white for text clips too */
+.timeline-track-clips-area .timeline-clip.clip-type-text .clip-info-overlay {
+    color: white;
+}
 .timeline-track-clips-area .timeline-clip .clip-info-overlay {
     background: rgba(0, 0, 0, 0.3); color: white; position: absolute; bottom: 0; left: 0; right: 0;
     height: 20px; display: flex; align-items: center; padding: 0 4px; font-size: 11px;
@@ -575,13 +757,24 @@ body {
 }
 .timeline-track-clips-area .timeline-clip .clip-info-overlay .ant-typography {
     color: white; flex-grow: 1; line-height: 1.2; }
-.timeline-track-clips-area .timeline-clip .clip-thumbnail-container {
-    position: absolute; inset: 0; display: flex; z-index: 1; flex-direction: row; pointer-events: none; }
 .timeline-track-clips-area .timeline-clip.clip-type-text .clip-thumbnail-container {
-    display: none;
+    display: none; /* Hide thumbnail container for text clips */
 }
 .timeline-track-clips-area .timeline-clip.clip-type-text .clip-text-content {
     color: white; font-size: 10px; padding: 0 4px; overflow: hidden; text-overflow: ellipsis;
     white-space: nowrap; width: 100%; height: 100%; display: flex; alignItems: center;
     justify-content: center; pointer-events: none; box-sizing: border-box;
+}
+/* Existing .timeline-clip.selected */
+.timeline-clip.selected {
+    border-color: #1677ff; box-shadow: 0 0 0 1px #1677ff; z-index: 10;
+}
+.ant-layout-sider.ant-layout{
+    min-width: 220px;
+    max-width: 220px;
+    width: 220px;
+}
+.preview-container{
+    margin-right: 100px;
+    position: absolute;
 }

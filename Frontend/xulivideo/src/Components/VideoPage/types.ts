@@ -1,3 +1,8 @@
+// --- START OF FILE typestach.txt ---
+
+// Assuming react-moveable types might be needed elsewhere, keep import if necessary
+// import type { OnDragEnd, OnResize, OnResizeEnd, OnRotateEnd } from 'react-moveable';
+
 export interface ThumbnailInfo {
     time: number;
     url: string;
@@ -74,12 +79,24 @@ export interface EditorProjectState {
     isPlaying: boolean;
     isPreviewMuted: boolean;
     playbackRate: number;
+    // --- Preview Zoom State (ADDED back) ---
+    previewZoomLevel: number; // Current numerical zoom level
+    previewZoomMode: string;  // Current zoom mode ('fit', 'fill', or percentage string)
     // --- Added Subtitle State ---
     subtitles: SubtitleEntry[]; // Array of subtitle entries
+    subtitleFontFamily: string; // Global font family for subtitles
+    subtitleFontSize: number;   // Global font size for subtitles (in pixels at 720p canvas height)
+    subtitleTextAlign: 'left' | 'center' | 'right'; // <--- ADDED: Global text alignment for subtitles
+    // --- ADDED: Global Subtitle Text Styles --- <--- ADDED HERE
+    isSubtitleBold: boolean;
+    isSubtitleItalic: boolean;
+    isSubtitleUnderlined: boolean;
+    // -----------------------------------------
 }
 
 
 // Type for the return value of the logic hook
 // This uses ReturnType to infer the exact shape returned by useVideoEditorLogic
 // Ensure the path is correct relative to this types file
+// Assuming useVideoEditorLogic.ts is in the same directory
 export type VideoEditorLogic = ReturnType<typeof import('./useVideoEditorLogic').useVideoEditorLogic>;
