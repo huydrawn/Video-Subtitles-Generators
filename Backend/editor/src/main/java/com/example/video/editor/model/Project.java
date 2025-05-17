@@ -15,15 +15,19 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Table(name = "projects")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"workspace"})
 public class Project {
 
     @Id
@@ -59,7 +63,5 @@ public class Project {
         if (this.publicId == null) {
             this.publicId = UUID.randomUUID().toString();
         }
-    }
-
-    
+    } 
 }

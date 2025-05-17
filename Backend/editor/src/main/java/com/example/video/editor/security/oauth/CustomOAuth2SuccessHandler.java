@@ -9,8 +9,9 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import com.example.video.editor.model.SecurityUser;
 import com.example.video.editor.model.User;
-import com.example.video.editor.model.UserDetailsImpl;
+import com.example.video.editor.model.UserStatus;
 import com.example.video.editor.repository.UserRepository;
 import com.example.video.editor.security.jwt.JwtService;
 
@@ -27,27 +28,30 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 	private UserRepository userRepository;
 
 	@Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                        Authentication authentication) throws IOException {
-        OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
-        OAuth2User user = oauthToken.getPrincipal();
-        String email = user.getAttribute("email");
-        String name = user.getAttribute("name");
+	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+			Authentication authentication) throws IOException {
+		String redirectUri = (String) request.getSession().getAttribute("redirect_uri");
+		System.out.println(request.getServletPath());
+		OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+		OAuth2User user = oauthToken.getPrincipal();
+		String email = user.getAttribute("email");
+		String name = user.getAttribute("name");
 
-        // Lưu user nếu lần đầu
-        User dbUser = userRepository.findByEmail(email).orElseGet(() -> {
-            // Bạn có thể cần thêm các thông tin khác từ OAuth2 user vào đây
-            return userRepository.save(User.builder().email(email).build());
-        });
+		// Lưu user nếu lần đầu
+		User dbUser = userRepository.findByEmail(email).orElseGet(() -> {
+			// Bạn có thể cần thêm các thông tin khác từ OAuth2 user vào đây
+			return userRepository.save(User.builder().status(UserStatus.ACTIVE).username(name).email(email).build());
+		});
 
-        // Tạo UserDetailsImpl từ User
-        UserDetailsImpl userDetails = UserDetailsImpl.build(dbUser);
+		// Tạo UserDetailsImpl từ User
+		SecurityUser userDetails = SecurityUser.build(dbUser);
 
-        // Tạo JWT bằng UserDetails
-        String jwt = jwtService.generateToken(userDetails);
+		// Tạo JWT bằng UserDetails
+		String jwt = jwtService.generateToken(userDetails);
 
-        // Trả JWT về frontend (redirect với JWT hoặc trả JSON)
-        String redirectUrl = "http://localhost:3000/oauth2/success?token=" + jwt; // Sử dụng JWT vừa tạo
-        response.sendRedirect(redirectUrl);
-    }
+		// Trả JWT về frontend (redirect với JWT hoặc trả JSON)
+		redirectUri += "?token=" + jwt; // Sử dụng JWT vừa tạo
+		System.out.println(redirectUri);
+		response.sendRedirect(redirectUri);
+	}
 }

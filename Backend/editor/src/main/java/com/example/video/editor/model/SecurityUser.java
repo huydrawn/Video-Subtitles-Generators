@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserDetailsImpl implements UserDetails {
+public class SecurityUser  implements UserDetails {
 
     private Long userId;
     private String email;
@@ -25,10 +25,10 @@ public class UserDetailsImpl implements UserDetails {
     private Boolean isCredentialsNonExpired;
     private Boolean isEnabled;
 
-    public static UserDetailsImpl build(User user) {
+    public static SecurityUser build(User user) {
         List<SimpleGrantedAuthority> authorities = null;
 
-        return new UserDetailsImpl(
+        return new SecurityUser(
                 user.getUserId(),
                 user.getEmail(),
                 user.getPasswordHash(),

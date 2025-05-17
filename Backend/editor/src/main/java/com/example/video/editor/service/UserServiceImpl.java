@@ -6,8 +6,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.video.editor.dto.UserRegistrationRequest;
+import com.example.video.editor.dto.WorkspaceDto;
+import com.example.video.editor.dto.WorkspaceResponseDto;
 import com.example.video.editor.exception.AlreadyExistsException;
 import com.example.video.editor.exception.NotFoundException;
+import com.example.video.editor.mapstruct.ProjectMapper;
+import com.example.video.editor.mapstruct.VideoMapper;
+import com.example.video.editor.mapstruct.WorkspaceMapper;
 import com.example.video.editor.model.User;
 import com.example.video.editor.model.UserStatus;
 import com.example.video.editor.model.Workspace;
@@ -15,13 +20,15 @@ import com.example.video.editor.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder; // Inject PasswordEncoder
+	private final WorkspaceMapper workspaceMapper;
 
 	@Override
 	public User saveUser(User user) {
@@ -46,20 +53,19 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Transactional
-    public User createWorkspaceForUser(Long userId, String workspaceName, String description) throws NotFoundException {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng với ID: " + userId));
+	public WorkspaceDto createWorkspaceForUser(Long userId, String workspaceName, String description)
+			throws NotFoundException {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng với ID: " + userId));
 
-        Workspace newWorkspace = Workspace.builder()
-                .workspaceName(workspaceName)
-                .description(description)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .user(user) // Thiết lập mối quan hệ ngược lại
-                .build();
+		Workspace newWorkspace = Workspace.builder().workspaceName(workspaceName).description(description)
+				.createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).user(user) // Thiết lập mối quan hệ ngược
+																							// lại
+				.build();
 
-        user.setWorkspace(newWorkspace);
-        return userRepository.save(user);
-    }
+		user.setWorkspace(newWorkspace);
+		userRepository.save(user);
+		return workspaceMapper.toDto(user.getWorkspace());
+	}
 
 }

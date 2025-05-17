@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.video.editor.dto.WorkspaceCreationRequest;
 import com.example.video.editor.exception.NotFoundException;
+import com.example.video.editor.model.SecurityUser;
 import com.example.video.editor.model.User;
 import com.example.video.editor.service.UserService;
 
@@ -24,14 +26,24 @@ public class UserController {
 
 	private final UserService userService;
 
-	@PostMapping("/{userId}/workspace")
-	public ResponseEntity<User> createWorkspaceForUser(@PathVariable Long userId,
-			@RequestBody WorkspaceCreationRequest request, @AuthenticationPrincipal UserDetails userDetails)
+	@GetMapping("/workspaces")
+	public ResponseEntity<?> getWorkSpaces(
+			@RequestBody WorkspaceCreationRequest request, @AuthenticationPrincipal SecurityUser securityUser)
 			throws NotFoundException {
 		
-		User updatedUser = userService.createWorkspaceForUser(userId, request.getWorkspaceName(),
+		var dto = userService.createWorkspaceForUser(securityUser.getUserId(), request.getWorkspaceName(),
 				request.getDescription());
-		return new ResponseEntity<>(updatedUser, HttpStatus.CREATED);
+		return new ResponseEntity<>(dto, HttpStatus.CREATED);
+	}
+	
+	@PostMapping("/workspace")
+	public ResponseEntity<?> createWorkspaceForUser(
+			@RequestBody WorkspaceCreationRequest request, @AuthenticationPrincipal SecurityUser securityUser)
+			throws NotFoundException {
+		
+		var dto = userService.createWorkspaceForUser(securityUser.getUserId(), request.getWorkspaceName(),
+				request.getDescription());
+		return new ResponseEntity<>(dto, HttpStatus.CREATED);
 	}
 
 	// Các API khác liên quan đến User
