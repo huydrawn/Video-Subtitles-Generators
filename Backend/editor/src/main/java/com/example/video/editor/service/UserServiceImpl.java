@@ -6,9 +6,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.video.editor.dto.UserRegistrationRequest;
+import com.example.video.editor.dto.WorkspaceDto;
 import com.example.video.editor.dto.WorkspaceResponseDto;
 import com.example.video.editor.exception.AlreadyExistsException;
 import com.example.video.editor.exception.NotFoundException;
+import com.example.video.editor.mapstruct.ProjectMapper;
+import com.example.video.editor.mapstruct.VideoMapper;
+import com.example.video.editor.mapstruct.WorkspaceMapper;
 import com.example.video.editor.model.User;
 import com.example.video.editor.model.UserStatus;
 import com.example.video.editor.model.Workspace;
@@ -24,6 +28,7 @@ public class UserServiceImpl implements UserService {
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder; // Inject PasswordEncoder
+	private final WorkspaceMapper workspaceMapper;
 
 	@Override
 	public User saveUser(User user) {
@@ -48,7 +53,8 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Transactional
-	public WorkspaceResponseDto createWorkspaceForUser(Long userId, String workspaceName, String description) throws NotFoundException {
+	public WorkspaceDto createWorkspaceForUser(Long userId, String workspaceName, String description)
+			throws NotFoundException {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng với ID: " + userId));
 
@@ -58,8 +64,8 @@ public class UserServiceImpl implements UserService {
 				.build();
 
 		user.setWorkspace(newWorkspace);
-		return WorkspaceResponseDto.builder().workspaceId(newWorkspace.getWorkspaceId()).description(description)
-				.name(workspaceName).build();
+		userRepository.save(user);
+		return workspaceMapper.toDto(user.getWorkspace());
 	}
 
 }

@@ -34,7 +34,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		boolean isExcluded = SecurityConstants.PUBLIC_URLS.stream()
 				.anyMatch(pattern -> pathMatcher.match(pattern, request.getServletPath()));
 		if (isExcluded) {
-			System.out.println("1");
 			filterChain.doFilter(request, response);
 			return;
 		}

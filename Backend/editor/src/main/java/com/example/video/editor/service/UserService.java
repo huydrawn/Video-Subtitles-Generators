@@ -1,7 +1,7 @@
 package com.example.video.editor.service;
 
 import com.example.video.editor.dto.UserRegistrationRequest;
-import com.example.video.editor.dto.WorkspaceResponseDto;
+import com.example.video.editor.dto.WorkspaceDto;
 import com.example.video.editor.exception.NotFoundException;
 import com.example.video.editor.model.User;
 
@@ -10,5 +10,5 @@ public interface UserService {
 
 	User registerNewUserAccount(UserRegistrationRequest registrationRequest);
 
-	WorkspaceResponseDto createWorkspaceForUser(Long userId, String workspaceName, String description) throws NotFoundException;
+	WorkspaceDto createWorkspaceForUser(Long userId, String workspaceName, String description) throws NotFoundException;
 }

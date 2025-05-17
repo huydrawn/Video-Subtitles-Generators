@@ -1,8 +1,7 @@
 package com.example.video.editor.controller;
 
-import java.util.Map;
+import java.io.IOException;
 
-import org.apache.tomcat.util.http.fileupload.FileUpload;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,8 +22,11 @@ public class VideoUploadController {
 
 	@PostMapping("/api/projects/{publicProjectId}/videos")
 	public ResponseEntity<String> uploadVideoToProject(@RequestParam("file") MultipartFile file,
-			@PathVariable String publicProjectId) {
-		String id = taskProcessingService.startProgressTask(fileUploadService, file, publicProjectId);
+			@PathVariable String publicProjectId) throws IOException {
+		System.out.println("ok");
+		byte[] fileBytes = file.getBytes();
+		String id = taskProcessingService.startProgressTask(fileUploadService, fileBytes, file.getOriginalFilename(),
+				publicProjectId);
 		return ResponseEntity.ok(id);
 	}
 }

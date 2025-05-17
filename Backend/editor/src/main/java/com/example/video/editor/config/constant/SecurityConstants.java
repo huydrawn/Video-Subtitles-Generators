@@ -5,6 +5,6 @@ import java.util.List;
 public class SecurityConstants {
 
     public static final List<String> PUBLIC_URLS = List.of(
-    		"/api/public/**", "/oauth2/**", "/sub/**"
+    		"/test/**","/api/public/**", "/oauth2/**", "/sub/**"
     );
 }

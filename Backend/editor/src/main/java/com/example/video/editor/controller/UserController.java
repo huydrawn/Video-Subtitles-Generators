@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,6 +26,16 @@ public class UserController {
 
 	private final UserService userService;
 
+	@GetMapping("/workspaces")
+	public ResponseEntity<?> getWorkSpaces(
+			@RequestBody WorkspaceCreationRequest request, @AuthenticationPrincipal SecurityUser securityUser)
+			throws NotFoundException {
+		
+		var dto = userService.createWorkspaceForUser(securityUser.getUserId(), request.getWorkspaceName(),
+				request.getDescription());
+		return new ResponseEntity<>(dto, HttpStatus.CREATED);
+	}
+	
 	@PostMapping("/workspace")
 	public ResponseEntity<?> createWorkspaceForUser(
 			@RequestBody WorkspaceCreationRequest request, @AuthenticationPrincipal SecurityUser securityUser)
