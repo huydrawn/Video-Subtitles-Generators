@@ -22,12 +22,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TestController {
 	private final Cloudinary cloudinary;
+
 	@GetMapping
 	public ResponseEntity<String> ok() throws IOException {
-		
-		
+
 		return ResponseEntity.ok("ok");
 	}
+
 	@PostMapping
 	public ResponseEntity<String> uploadVideoToProject(@RequestParam("file") MultipartFile file) throws IOException {
 		Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap("resource_type", "video", // video
@@ -35,5 +36,11 @@ public class TestController {
 		));
 		var x = uploadResult.get("url");
 		return ResponseEntity.ok(x + "");
+	}
+
+	@PostMapping("/ok")
+	public ResponseEntity<String> hi() throws IOException {
+ 
+		return ResponseEntity.ok("hiiiii");
 	}
 }

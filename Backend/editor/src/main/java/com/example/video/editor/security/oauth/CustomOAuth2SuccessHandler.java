@@ -1,6 +1,7 @@
 package com.example.video.editor.security.oauth;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -31,7 +32,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication authentication) throws IOException {
 		String redirectUri = (String) request.getSession().getAttribute("redirect_uri");
-		System.out.println(request.getServletPath());
+
 		OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
 		OAuth2User user = oauthToken.getPrincipal();
 		String email = user.getAttribute("email");
@@ -40,7 +41,8 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 		// Lưu user nếu lần đầu
 		User dbUser = userRepository.findByEmail(email).orElseGet(() -> {
 			// Bạn có thể cần thêm các thông tin khác từ OAuth2 user vào đây
-			return userRepository.save(User.builder().status(UserStatus.ACTIVE).username(name).email(email).build());
+			return userRepository.save(User.builder().status(UserStatus.ACTIVE).username(name)
+					.createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).email(email).build());
 		});
 
 		// Tạo UserDetailsImpl từ User
@@ -48,10 +50,10 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
 		// Tạo JWT bằng UserDetails
 		String jwt = jwtService.generateToken(userDetails);
-
+		System.out.println(jwt);
 		// Trả JWT về frontend (redirect với JWT hoặc trả JSON)
 		redirectUri += "?token=" + jwt; // Sử dụng JWT vừa tạo
-		System.out.println(redirectUri);
+
 		response.sendRedirect(redirectUri);
 	}
 }

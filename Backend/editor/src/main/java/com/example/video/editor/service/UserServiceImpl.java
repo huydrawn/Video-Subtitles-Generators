@@ -2,16 +2,16 @@ package com.example.video.editor.service;
 
 import java.time.LocalDateTime;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.video.editor.dto.UserDTO;
 import com.example.video.editor.dto.UserRegistrationRequest;
 import com.example.video.editor.dto.WorkspaceDto;
-import com.example.video.editor.dto.WorkspaceResponseDto;
 import com.example.video.editor.exception.AlreadyExistsException;
 import com.example.video.editor.exception.NotFoundException;
-import com.example.video.editor.mapstruct.ProjectMapper;
-import com.example.video.editor.mapstruct.VideoMapper;
+import com.example.video.editor.mapstruct.UserMapper;
 import com.example.video.editor.mapstruct.WorkspaceMapper;
 import com.example.video.editor.model.User;
 import com.example.video.editor.model.UserStatus;
@@ -19,7 +19,6 @@ import com.example.video.editor.model.Workspace;
 import com.example.video.editor.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -29,6 +28,7 @@ public class UserServiceImpl implements UserService {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder; // Inject PasswordEncoder
 	private final WorkspaceMapper workspaceMapper;
+	private final UserMapper userMapper;
 
 	@Override
 	public User saveUser(User user) {
@@ -48,16 +48,14 @@ public class UserServiceImpl implements UserService {
 		user.setUsername(registrationRequest.getUsername());
 		user.setEmail(registrationRequest.getEmail());
 		user.setPasswordHash(passwordEncoder.encode(registrationRequest.getPassword()));
-		user.setStatus(UserStatus.PENDING); // Hoặc trạng thái mặc định
+		user.setStatus(UserStatus.ACTIVE); // Hoặc trạng thái mặc định
 		return userRepository.save(user);
 	}
 
 	@Transactional
 	public WorkspaceDto createWorkspaceForUser(Long userId, String workspaceName, String description)
 			throws NotFoundException {
-		User user = userRepository.findById(userId)
-				.orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng với ID: " + userId));
-
+		User user = findById(userId);
 		Workspace newWorkspace = Workspace.builder().workspaceName(workspaceName).description(description)
 				.createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).user(user) // Thiết lập mối quan hệ ngược
 																							// lại
@@ -66,6 +64,23 @@ public class UserServiceImpl implements UserService {
 		user.setWorkspace(newWorkspace);
 		userRepository.save(user);
 		return workspaceMapper.toDto(user.getWorkspace());
+	}
+
+	@Override
+	public UserDTO getUserInfo(Long userId) throws NotFoundException {
+		var user = findById(userId);
+		return userMapper.toDto(user);
+	}
+
+	private User findById(long userId) throws NotFoundException {
+		return userRepository.findById(userId)
+				.orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng với ID: " + userId));
+	}
+
+	@Cacheable(value = "userStorageCache", key = "#userId")
+	public Long calculateUsedStorage(Long userId) {
+		System.out.println("getDb");
+		return userRepository.getUsedStorageByUserId(userId);
 	}
 
 }

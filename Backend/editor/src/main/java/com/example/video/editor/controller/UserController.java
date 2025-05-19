@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.video.editor.dto.UserDTO;
 import com.example.video.editor.dto.WorkspaceCreationRequest;
 import com.example.video.editor.exception.NotFoundException;
 import com.example.video.editor.model.SecurityUser;
@@ -26,25 +27,36 @@ public class UserController {
 
 	private final UserService userService;
 
-	@GetMapping("/workspaces")
-	public ResponseEntity<?> getWorkSpaces(
-			@RequestBody WorkspaceCreationRequest request, @AuthenticationPrincipal SecurityUser securityUser)
-			throws NotFoundException {
-		
-		var dto = userService.createWorkspaceForUser(securityUser.getUserId(), request.getWorkspaceName(),
-				request.getDescription());
-		return new ResponseEntity<>(dto, HttpStatus.CREATED);
+	@GetMapping
+	public ResponseEntity<?> getUserInfo(@AuthenticationPrincipal SecurityUser securityUser) throws NotFoundException {
+		UserDTO dto = userService.getUserInfo(securityUser.getUserId());
+		return new ResponseEntity<>(dto, HttpStatus.OK);
 	}
-	
-	@PostMapping("/workspace")
-	public ResponseEntity<?> createWorkspaceForUser(
-			@RequestBody WorkspaceCreationRequest request, @AuthenticationPrincipal SecurityUser securityUser)
+
+	@GetMapping("/storage")
+	public ResponseEntity<?> getUserUseStorage(@AuthenticationPrincipal SecurityUser securityUser)
 			throws NotFoundException {
-		
+		var bytes = userService.calculateUsedStorage(securityUser.getUserId());
+
+		return new ResponseEntity<>(bytes == null ? 0 : bytes, HttpStatus.OK);
+	}
+
+	@GetMapping("/workspaces")
+	public ResponseEntity<?> getWorkSpaces(@RequestBody WorkspaceCreationRequest request,
+			@AuthenticationPrincipal SecurityUser securityUser) throws NotFoundException {
+
 		var dto = userService.createWorkspaceForUser(securityUser.getUserId(), request.getWorkspaceName(),
 				request.getDescription());
 		return new ResponseEntity<>(dto, HttpStatus.CREATED);
 	}
 
-	// Các API khác liên quan đến User
+	@PostMapping("/workspace")
+	public ResponseEntity<?> createWorkspaceForUser(@RequestBody WorkspaceCreationRequest request,
+			@AuthenticationPrincipal SecurityUser securityUser) throws NotFoundException {
+
+		var dto = userService.createWorkspaceForUser(securityUser.getUserId(), request.getWorkspaceName(),
+				request.getDescription());
+		return new ResponseEntity<>(dto, HttpStatus.CREATED);
+	}
+
 }

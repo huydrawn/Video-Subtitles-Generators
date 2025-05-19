@@ -31,12 +31,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
+		
+		if (request.getMethod().toString().equals("OPTIONS")) {
+			filterChain.doFilter(request, response);
+			
+			return;
+		}
 		boolean isExcluded = SecurityConstants.PUBLIC_URLS.stream()
 				.anyMatch(pattern -> pathMatcher.match(pattern, request.getServletPath()));
 		if (isExcluded) {
+			System.out.println(request.getServletPath());
 			filterChain.doFilter(request, response);
 			return;
 		}
+		
 		final String authHeader = request.getHeader("Authorization");
 
 		if (authHeader == null || !authHeader.startsWith("Bearer ")) {
