@@ -29,28 +29,27 @@ public class FileUploadService extends ProgressTask {
 		byte[] fileBytes = (byte[]) params[0];
 		String originName = (String) params[1];
 		String publicProjectId = (String) params[2];
-		
+
 		progressCallback.accept(0, "Bắt đầu xử lý video");
-		
+
 		Project project = null;
-		Video savedVideo = null;
+		Video video = null;
 		try {
-			
+
 			project = projectRepository.findByPublicId(publicProjectId)
 					.orElseThrow(() -> new NotFoundException("Không tìm thấy Project với ID: " + publicProjectId));
 			progressCallback.accept(10, "Đã tìm thấy Project");
-			
 
 			// Tải video lên Cloudinary
-			savedVideo = videoService.uploadVideoToCloudinary(fileBytes,originName);
-			
-			progressCallback.accept(70, "Tải video lên Cloudinary thành công");
+			video = videoService.uploadVideoToCloudinary(fileBytes, originName);
 
+			progressCallback.accept(70, "Tải video lên Cloudinary thành công");
+			videoRepository.save(video);
 			progressCallback.accept(90, "Lưu thông tin video vào database thành công");
-			completeCallback.accept(savedVideo, "Xử lý video hoàn tất");
+			completeCallback.accept(video, "Xử lý video hoàn tất");
 
 			// Liên kết video với project
-			project.setVideo(savedVideo);
+			project.setVideo(video);
 			projectRepository.save(project); // Gọi ProjectService để save project
 
 		} catch (NotFoundException e) {

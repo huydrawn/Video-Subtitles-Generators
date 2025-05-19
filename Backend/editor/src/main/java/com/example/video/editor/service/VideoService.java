@@ -45,7 +45,7 @@ public class VideoService {
 																							// trong entity nếu muốn lưu
 				.build();
 
-		return videoRepository.save(video);
+		return video;
 	}
 
 	public Optional<Video> getVideoById(Long id) {

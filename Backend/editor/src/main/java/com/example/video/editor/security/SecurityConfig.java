@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -20,9 +21,6 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.video.editor.config.constant.SecurityConstants;
 import com.example.video.editor.security.filter.JwtAuthenticationFilter;
@@ -38,11 +36,12 @@ public class SecurityConfig {
 	private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
 	private final JwtAuthenticationFilter jwtAuthFilter;
 	private final CustomUserDetailsService userDetailsService;
-	
+
 	@Bean
 	public RestTemplate restTemplate() {
-	    return new RestTemplate();
+		return new RestTemplate();
 	}
+
 	@Bean
 	public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
 		return config.getAuthenticationManager();
@@ -65,9 +64,9 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity http,
 			ClientRegistrationRepository clientRegistrationRepository) throws Exception {
 		http.csrf(csrf -> csrf.disable())
-				.authorizeHttpRequests(
-						auth -> auth.requestMatchers(SecurityConstants.PUBLIC_URLS.toArray(new String[0])).permitAll()
-								.anyRequest().authenticated())
+				.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+						.requestMatchers(SecurityConstants.PUBLIC_URLS.toArray(new String[0])).permitAll().anyRequest()
+						.authenticated())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(daoAuthenticationProvider())
 				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
@@ -116,18 +115,5 @@ public class SecurityConfig {
 				return OAuth2AuthorizationRequest.from(authRequest).additionalParameters(additionalParams).build();
 			}
 		};
-	}
-
-	@Bean
-	public CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowCredentials(true); // ✅ Cho phép gửi cookie/token nếu cần
-		config.addAllowedOrigin("*"); // ✅ CHỈ host này được phép
-		config.addAllowedHeader("*");
-		config.addAllowedMethod("*"); // GET, POST, PUT, DELETE...
-
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", config); // Áp dụng cho toàn bộ path
-		return source;
 	}
 }
