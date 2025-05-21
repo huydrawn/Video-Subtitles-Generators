@@ -9,7 +9,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder; // Keep the import
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -23,32 +23,39 @@ import com.example.video.editor.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
-@RequiredArgsConstructor
+@RequiredArgsConstructor // This will now generate a constructor for the remaining final fields
 public class SecurityConfig {
-	private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+
+    // Remove the private final PasswordEncoder passwordEncoder; field
+    // private final PasswordEncoder passwordEncoder; <-- REMOVE THIS LINE
+
+    private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
-    private final PasswordEncoder passwordEncoder;
+    // @RequiredArgsConstructor will now generate a constructor with just the above 3 fields
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
     @Bean
-    public AuthenticationProvider daoAuthenticationProvider() {
+    // Spring will inject the PasswordEncoder bean here
+    public AuthenticationProvider daoAuthenticationProvider(PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
+        provider.setUserDetailsService(userDetailsService); // userDetailsService is injected via constructor
+        provider.setPasswordEncoder(passwordEncoder); // passwordEncoder is injected into this method
         return provider;
     }
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
 
-	@Bean
+    @Bean // This method defines the PasswordEncoder bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
+        a
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/public/**", "/oauth2/**", "/sub/**")
@@ -57,25 +64,49 @@ public class SecurityConfig {
                         .authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(daoAuthenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .authenticationProvider(daoAuthenticationProvider(passwordEncoder())) // Call the bean method, Spring might handle this implicitly too, but explicit is clearer sometimes, or inject daoAuthenticationProvider bean directly
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class) // jwtAuthFilter is injected via constructor
                 .oauth2Login(oauth2 -> oauth2
-                        .successHandler(customOAuth2SuccessHandler)
+                        .successHandler(customOAuth2SuccessHandler) // customOAuth2SuccessHandler is injected via constructor
                 );
 
         return http.build();
     }
 
-	@Bean
-	public CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowCredentials(true); // ✅ Cho phép gửi cookie/token nếu cần
-		config.addAllowedOrigin("*"); // ✅ CHỈ host này được phép
-		config.addAllowedHeader("*");
-		config.addAllowedMethod("*"); // GET, POST, PUT, DELETE...
+    // Alternative for securityFilterChain (injecting beans as method parameters)
+    /*
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider authenticationProvider, JwtAuthenticationFilter jwtAuthFilter, CustomOAuth2SuccessHandler customOAuth2SuccessHandler) throws Exception {
+         http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/public/**", "/oauth2/**", "/sub/**")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated()
+                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider) // Use injected bean
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class) // Use injected bean
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(customOAuth2SuccessHandler) // Use injected bean
+                );
 
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", config); // Áp dụng cho toàn bộ path
-		return source;
-	}
+        return http.build();
+    }
+    */
+
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.addAllowedOrigin("*"); // Consider restricting this in production!
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 }
