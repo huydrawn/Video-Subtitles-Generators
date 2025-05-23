@@ -1,32 +1,70 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Video from './Components/VideoPage/index'; // Assuming you named your main app component VideoStreamingApp
-import UploadPage from './Components/VideoPage/upload'; // Assuming you named your upload component UploadPage
-import SummaryPage from './Components/VideoPage/summary'; // Assuming you named your summary component SummaryPage
-import VideoEditorPage from './Components/VideoPage/VideoEditor'; // Assuming you named your summary component SummaryPage
-import AuthenticatePage from './Components/Auth/AuthenticatePage';
+// File: src/App.tsx (or wherever your main App component is)
 
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+// Import the ProtectedRoute component (ensure this file is saved as auth.tsx)
+import ProtectedRoute from './Components/Auth/auth';
+
+// Import components directly (as they were in your original second App.tsx)
+import VideoPage from './Components/VideoPage/index'; // Using VideoPage as consistent name
+import UploadPage from './Components/VideoPage/upload';
+import SummaryPage from './Components/VideoPage/summary';
+import VideoEditorPage from './Components/VideoPage/VideoEditor';
+import AuthenticatePage from './Components/Auth/AuthenticatePage';
+import HomePage from './Components/VideoPage/home'; // This is your Kapwing-like page
+import NewHomePage from './Components/VideoPage/index'; // This is your Kapwing-like page
+import OAuth2Page from './Components/Auth/OAuth2RedirectPage';
 
 function App() {
     return (
         <BrowserRouter>
             <Routes>
-                {/* Route for the main Video Streaming App page */}
-                <Route path="/" element={<Video />} />
+                {/* --- Routes NOT requiring protection --- */}
 
-                {/* Route for the Video Upload Page */}
-                <Route path="/upload" element={<UploadPage />} />
+                {/* The root path "/" should show HomePage and is NOT protected */}
+                <Route path="/" element={<HomePage />} />
 
-                {/* Route for the Video Summary Page */}
-                <Route path="/summary" element={<SummaryPage />} />
-                <Route path="/videoeditor" element={<VideoEditorPage />} />
-                {/* Add routes for login and register */}
+                {/* Authentication routes are typically NOT protected by a login-redirect rule */}
                 <Route path="/login" element={<AuthenticatePage />} />
                 <Route path="/register" element={<AuthenticatePage />} />
+                <Route path="/oauth2/redirect" element={<OAuth2Page />} />
+                {/* --- Routes REQUIRING protection --- */}
+                {/* Wrap the target component with ProtectedRoute for these paths */}
+                <Route
+                    path="/index"
+                    element={<ProtectedRoute component={NewHomePage} />}
+                />
+                {/* /video route */}
+                <Route
+                    path="/video"
+                    element={<ProtectedRoute component={VideoPage} />}
+                />
 
-                {/* Redirect any unmatched route to the home page */}
+                {/* /upload route */}
+                <Route
+                    path="/upload"
+                    element={<ProtectedRoute component={UploadPage} />}
+                />
+
+                {/* /summary route */}
+                <Route
+                    path="/summary"
+                    element={<ProtectedRoute component={SummaryPage} />}
+                />
+
+                {/* /videoeditor route */}
+                <Route
+                    path="/videoeditor"
+                    element={<ProtectedRoute component={VideoEditorPage} />}
+                />
+                <Route
+                    path="/"
+                    element={<ProtectedRoute component={UploadPage} />}
+                />
+
+                {/* --- Catch-all Route --- */}
+                {/* Redirect any unmatched route to the unprotected home page "/" */}
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </BrowserRouter>

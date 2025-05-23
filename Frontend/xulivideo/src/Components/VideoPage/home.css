@@ -1,0 +1,359 @@
+/* KapwingLanding.css */
+
+body {
+    margin: 0;
+    font-family: sans-serif; /* Using a generic sans-serif similar to the original */
+    color: #333; /* Default text color */
+    background-color: #fff;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+.kapwing-landing-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Header Styling */
+.header {
+    width: 100%;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee; /* Subtle separation */
+    box-sizing: border-box;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.logo-bar {
+    display: inline-block;
+    width: 4px;
+    height: 20px;
+    margin-right: 2px;
+    border-radius: 2px;
+}
+
+.logo-bar-1 { background-color: #35e6ff; } /* Cyan */
+.logo-bar-2 { background-color: #35ff99; } /* Green */
+.logo-bar-3 { background-color: #ff35f9; } /* Magenta */
+.logo-bar-4 { background-color: #ff9935; } /* Orange */
+
+.logo-text {
+    margin-left: 4px; /* Space between bars and text */
+}
+
+
+.nav-links a {
+    margin: 0 15px;
+    text-decoration: none;
+    color: #555;
+    font-size: 0.95em;
+    display: inline-flex;
+    align-items: center;
+}
+
+.nav-links a:hover {
+    color: #000;
+}
+
+.dropdown-arrow {
+    font-size: 0.8em;
+    margin-left: 4px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.header-right a {
+    margin-left: 20px;
+    text-decoration: none;
+    font-size: 0.95em;
+}
+
+.request-demo {
+    color: #555;
+}
+
+.request-demo:hover {
+    color: #000;
+}
+
+.sign-in {
+    color: #555;
+}
+
+.sign-in:hover {
+    color: #000;
+}
+
+.try-kapwing-free {
+    border: 1px solid #ccc;
+    padding: 8px 15px;
+    border-radius: 4px;
+    color: #333;
+}
+
+.try-kapwing-free:hover {
+    border-color: #aaa;
+}
+
+
+/* Hero Section Styling */
+.hero-section {
+    text-align: center;
+    padding: 80px 20px 60px 20px; /* Adjust padding as needed */
+    width: 100%;
+    max-width: 800px; /* Limit width for readability */
+    box-sizing: border-box;
+}
+
+.headline {
+    font-size: 3em; /* Large font size */
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #333; /* Default dark grey */
+}
+
+.color-more { color: #35e6ff; } /* Cyan */
+.color-content { color: #ff35f9; } /* Magenta */
+.color-time { color: #ff9935; } /* Orange */
+
+
+.description {
+    font-size: 1.3em;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 40px;
+}
+
+.get-started-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 15px 30px;
+    background: linear-gradient(to right, #35e6ff, #35ff99); /* Gradient background */
+    color: #000; /* Button text color */
+    font-size: 1.1em;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none; /* Remove underline from link */
+    transition: opacity 0.3s ease;
+}
+
+.get-started-button:hover {
+    opacity: 0.9;
+}
+
+.get-started-button .upload-icon,
+.get-started-button .arrow-icon {
+    margin: 0 8px;
+    stroke-width: 2.5; /* Make icons a bit bolder */
+}
+
+.get-started-button .upload-icon {
+    margin-left: 0;
+}
+.get-started-button .arrow-icon {
+    margin-right: 0;
+}
+
+
+/* Video Section Styling */
+.video-section {
+    width: 100%;
+    background-color: #1a1a1a; /* Dark background */
+    padding: 40px 0; /* Vertical padding */
+    display: flex;
+    justify-content: center; /* Center the video container */
+}
+
+.video-player-container {
+    width: 90%; /* Adjust width as needed */
+    max-width: 1200px; /* Max width for larger screens */
+    background-color: #000; /* Black background for player area */
+    border-radius: 8px;
+    overflow: hidden; /* Ensures content inside respects border-radius */
+    position: relative; /* Needed for positioning sidebar and content */
+    display: flex; /* Use flexbox to layout sidebar and video content */
+}
+
+.video-sidebar {
+    width: 80px; /* Fixed width for sidebar */
+    background-color: #222; /* Slightly lighter dark background for sidebar */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+}
+
+.sidebar-item {
+    color: #ccc;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+.sidebar-item:hover {
+    color: #fff;
+}
+.sidebar-item svg {
+    display: block; /* Stack icon and text */
+    margin: 0 auto 5px auto; /* Center icon above text */
+    stroke: #ccc;
+}
+.sidebar-item:hover svg {
+    stroke: #fff;
+}
+
+
+.video-content {
+    flex-grow: 1; /* Take up remaining space */
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Needed for overlay positioning */
+}
+
+
+.video-player-bar {
+    width: 100%;
+    background-color: #2a2a2a; /* Dark grey for the bar */
+    color: #ccc;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9em;
+    box-sizing: border-box;
+}
+
+.project-title {
+    display: flex;
+    align-items: center;
+}
+
+.logo-small {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    background: linear-gradient(45deg, #35e6ff, #35ff99, #ff35f9, #ff9935); /* Simple gradient blob */
+    border-radius: 3px;
+    margin-right: 8px;
+}
+
+.player-controls {
+    display: flex;
+    align-items: center;
+}
+
+.control-icon {
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.share-button,
+.export-button {
+    background-color: #3a3a3a; /* Dark button background */
+    color: #ccc;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-left: 15px;
+    cursor: pointer;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+}
+
+.share-button svg,
+.export-button svg {
+    margin-right: 5px;
+    stroke: #ccc;
+}
+
+.share-button:hover,
+.export-button:hover {
+    background-color: #4a4a4a;
+}
+
+.export-button {
+    background-color: #00c4a8; /* Teal export button */
+    color: #000;
+}
+.export-button svg {
+    stroke: #000;
+}
+.export-button:hover {
+    background-color: #00e0bd;
+}
+
+
+.hero-video {
+    width: 100%;
+    height: auto; /* Maintain aspect ratio */
+    display: block; /* Remove extra space below video */
+    flex-grow: 1; /* Allow video to take up space below the bar */
+    object-fit: cover; /* Cover the container, might crop */
+}
+
+/* Video Overlay Styling */
+.video-overlay {
+    position: absolute;
+    top: 50%; /* Adjust vertically */
+    left: 70%; /* Adjust horizontally */
+    transform: translate(-50%, -50%); /* Center based on its own size */
+    pointer-events: none; /* Allows clicks to pass through to the video */
+    z-index: 10; /* Ensure it's above the video */
+}
+
+.overlay-box {
+    background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
+    border: 2px dashed #35e6ff; /* Dashed border */
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1em; /* Adjust size as needed */
+    color: #333;
+    line-height: 1.2;
+}
+
+.overlay-cursor {
+    width: 20px; /* Size of cursor */
+    height: 20px;
+    background-color: yellow; /* Placeholder for cursor */
+    clip-path: polygon(0% 0%, 100% 100%, 75% 100%, 50% 50%, 50% 0%); /* Simple triangle shape */
+    position: absolute;
+    bottom: -15px; /* Position relative to the box */
+    right: -15px; /* Position relative to the box */
+    transform: rotate(45deg); /* Rotate to look like a cursor */
+}
+
+.overlay-label {
+    background-color: yellow;
+    color: #333;
+    font-size: 0.8em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    position: absolute;
+    bottom: -25px; /* Position relative to the box */
+    right: -5px; /* Position relative to the box */
+    transform: translateX(50%); /* Adjust position */
+}

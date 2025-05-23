@@ -20,13 +20,13 @@ const Register: React.FC<RegisterProps> = ({ toggleSignIn }) => {
                 <Input placeholder="Email" type="email" size="large" />
             </Form.Item>
 
-            <Form.Item name="phone">
-                <Input placeholder="Telephone" size="large" />
-            </Form.Item>
-
             <Form.Item name="password">
                 <Input.Password placeholder="Password" size="large" />
             </Form.Item>
+            <Form.Item name="repass">
+                <Input placeholder="Repassword" size="large" />
+            </Form.Item>
+
 
             <Form.Item>
                 <Button type="primary" htmlType="submit" className="auth-button sign-up-button" block>
