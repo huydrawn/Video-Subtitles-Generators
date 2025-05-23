@@ -6,8 +6,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import com.example.video.editor.model.SecurityUser;
 import com.example.video.editor.model.User;
-import com.example.video.editor.model.UserDetailsImpl;
 import com.example.video.editor.repository.UserRepository;
 
 @Service
@@ -25,6 +25,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng với email: " + email));
 
-        return UserDetailsImpl.build(user);
+        return SecurityUser.build(user);
     }
 }

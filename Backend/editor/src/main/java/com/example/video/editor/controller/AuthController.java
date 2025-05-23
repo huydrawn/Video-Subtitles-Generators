@@ -18,7 +18,7 @@ import com.example.video.editor.service.UserService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/public/auth")
 public class AuthController {
 	@Autowired
 	private UserService userService;
@@ -31,8 +31,8 @@ public class AuthController {
 	}
 
 	@PostMapping("/register")
-	public ResponseEntity<User> registerUser(@Valid @RequestBody UserRegistrationRequest registrationRequest) {
+	public ResponseEntity<?> registerUser(@Valid @RequestBody UserRegistrationRequest registrationRequest) {
 		User registeredUser = userService.registerNewUserAccount(registrationRequest);
-		return new ResponseEntity<>(registeredUser, HttpStatus.CREATED);
+		return new ResponseEntity<>("Register success", HttpStatus.CREATED);
 	}
 }

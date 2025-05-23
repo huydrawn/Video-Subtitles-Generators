@@ -8,15 +8,14 @@ import java.util.concurrent.Executors;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class TaskProcessingService {
 
 	private final SimpMessagingTemplate messagingTemplate;
 	private final ExecutorService taskExecutor = Executors.newCachedThreadPool();
-
-	public TaskProcessingService(SimpMessagingTemplate messagingTemplate) {
-		this.messagingTemplate = messagingTemplate;
-	}
 
 	public String startProgressTask(ProgressTask task, Object... params) {
 		String taskId = UUID.randomUUID().toString();
@@ -27,6 +26,7 @@ public class TaskProcessingService {
 						(error, message) -> sendError(taskId, error, message), params);
 			} catch (Exception e) {
 				sendError(taskId, "Task execution failed: " + e.getMessage(), null);
+				e.printStackTrace();
 			}
 		});
 		return taskId;

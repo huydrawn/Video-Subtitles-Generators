@@ -1,11 +1,11 @@
 package com.example.video.editor.controller;
 
-import java.util.Map;
+import java.io.IOException;
 
-import org.apache.tomcat.util.http.fileupload.FileUpload;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,14 +17,18 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/projects")
 public class VideoUploadController {
 	private final TaskProcessingService taskProcessingService;
 	private final FileUploadService fileUploadService;
 
-	@PostMapping("/api/projects/{publicProjectId}/videos")
+	@PostMapping("/{publicProjectId}/videos")
 	public ResponseEntity<String> uploadVideoToProject(@RequestParam("file") MultipartFile file,
-			@PathVariable String publicProjectId) {
-		String id = taskProcessingService.startProgressTask(fileUploadService, file, publicProjectId);
+			@PathVariable String publicProjectId) throws IOException {
+		
+		byte[] fileBytes = file.getBytes();
+		String id = taskProcessingService.startProgressTask(fileUploadService, fileBytes, file.getOriginalFilename(),
+				publicProjectId);
 		return ResponseEntity.ok(id);
 	}
 }

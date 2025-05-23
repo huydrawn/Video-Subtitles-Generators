@@ -1,7 +1,11 @@
 package com.example.video.editor.security;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -9,104 +13,107 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder; // Keep the import
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.client.RestTemplate;
 
+import com.example.video.editor.config.constant.SecurityConstants;
 import com.example.video.editor.security.filter.JwtAuthenticationFilter;
 import com.example.video.editor.security.oauth.CustomOAuth2SuccessHandler;
 import com.example.video.editor.service.CustomUserDetailsService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
-@RequiredArgsConstructor // This will now generate a constructor for the remaining final fields
+@RequiredArgsConstructor
 public class SecurityConfig {
+	private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+	private final JwtAuthenticationFilter jwtAuthFilter;
+	private final CustomUserDetailsService userDetailsService;
 
-    // Remove the private final PasswordEncoder passwordEncoder; field
-    // private final PasswordEncoder passwordEncoder; <-- REMOVE THIS LINE
+	@Bean
+	public RestTemplate restTemplate() {
+		return new RestTemplate();
+	}
 
-    private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
-    private final JwtAuthenticationFilter jwtAuthFilter;
-    private final CustomUserDetailsService userDetailsService;
-    // @RequiredArgsConstructor will now generate a constructor with just the above 3 fields
+	@Bean
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+		return config.getAuthenticationManager();
+	}
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+	@Bean
+	public AuthenticationProvider daoAuthenticationProvider() {
+		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+		provider.setUserDetailsService(userDetailsService);
+		provider.setPasswordEncoder(passwordEncoder());
+		return provider;
+	}
 
-    @Bean
-    // Spring will inject the PasswordEncoder bean here
-    public AuthenticationProvider daoAuthenticationProvider(PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService); // userDetailsService is injected via constructor
-        provider.setPasswordEncoder(passwordEncoder); // passwordEncoder is injected into this method
-        return provider;
-    }
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
 
-    @Bean // This method defines the PasswordEncoder bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http,
+												   ClientRegistrationRepository clientRegistrationRepository) throws Exception {
+		http.csrf(csrf -> csrf.disable())
+				.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+						.requestMatchers(SecurityConstants.PUBLIC_URLS.toArray(new String[0])).permitAll().anyRequest()
+						.authenticated())
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.authenticationProvider(daoAuthenticationProvider())
+				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+				.oauth2Login(oauth2 -> oauth2
+						.authorizationEndpoint(authorization -> authorization.authorizationRequestResolver(
+								customAuthorizationRequestResolver(clientRegistrationRepository)))
+						.successHandler(customOAuth2SuccessHandler));
+		return http.build();
+	}
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        a
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/public/**", "/oauth2/**", "/sub/**")
-                        .permitAll()
-                        .anyRequest()
-                        .authenticated()
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(daoAuthenticationProvider(passwordEncoder())) // Call the bean method, Spring might handle this implicitly too, but explicit is clearer sometimes, or inject daoAuthenticationProvider bean directly
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class) // jwtAuthFilter is injected via constructor
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(customOAuth2SuccessHandler) // customOAuth2SuccessHandler is injected via constructor
-                );
+	private OAuth2AuthorizationRequestResolver customAuthorizationRequestResolver(ClientRegistrationRepository repo) {
+		DefaultOAuth2AuthorizationRequestResolver defaultResolver = new DefaultOAuth2AuthorizationRequestResolver(repo,
+				"/oauth2/authorization");
 
-        return http.build();
-    }
+		return new OAuth2AuthorizationRequestResolver() {
+			@Override
+			public OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
+				OAuth2AuthorizationRequest authRequest = defaultResolver.resolve(request);
+				if (authRequest == null)
+					return null;
 
-    // Alternative for securityFilterChain (injecting beans as method parameters)
-    /*
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider authenticationProvider, JwtAuthenticationFilter jwtAuthFilter, CustomOAuth2SuccessHandler customOAuth2SuccessHandler) throws Exception {
-         http
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/public/**", "/oauth2/**", "/sub/**")
-                        .permitAll()
-                        .anyRequest()
-                        .authenticated()
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider) // Use injected bean
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class) // Use injected bean
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(customOAuth2SuccessHandler) // Use injected bean
-                );
+				String redirectUri = request.getParameter("redirect_uri");
+				Map<String, Object> additionalParams = new HashMap<>(authRequest.getAdditionalParameters());
 
-        return http.build();
-    }
-    */
+				if (redirectUri != null) {
+					request.getSession().setAttribute("redirect_uri", redirectUri);
+				}
 
+				return OAuth2AuthorizationRequest.from(authRequest).additionalParameters(additionalParams).build();
+			}
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(true);
-        config.addAllowedOrigin("*"); // Consider restricting this in production!
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
+			@Override
+			public OAuth2AuthorizationRequest resolve(HttpServletRequest request, String clientRegistrationId) {
+				OAuth2AuthorizationRequest authRequest = defaultResolver.resolve(request, clientRegistrationId);
+				if (authRequest == null)
+					return null;
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
+				String redirectUri = request.getParameter("redirect_uri");
+				Map<String, Object> additionalParams = new HashMap<>(authRequest.getAdditionalParameters());
+
+				if (redirectUri != null) {
+					additionalParams.put("redirect_uri", redirectUri);
+					request.getSession().setAttribute("redirect_uri", redirectUri);
+				}
+
+				return OAuth2AuthorizationRequest.from(authRequest).additionalParameters(additionalParams).build();
+			}
+		};
+	}
 }

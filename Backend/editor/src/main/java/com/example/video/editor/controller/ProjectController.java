@@ -16,21 +16,21 @@ import com.example.video.editor.service.ProjectService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/workspaces/{workspaceId}/projects")
+@RequestMapping("/api/workspace/{workspacePublicId}/projects")
 @RequiredArgsConstructor
 public class ProjectController {
 
     private final ProjectService projectService;
 
     @PostMapping
-    public ResponseEntity<Project> createProject(
-            @PathVariable Long workspaceId,
+    public ResponseEntity<?> createProject(
+            @PathVariable String workspacePublicId,
             @RequestBody ProjectCreationRequest request) throws NotFoundException {
-        Project newProject = projectService.createProject(
-                workspaceId,
+        var dto = projectService.createProject(
+        		workspacePublicId,
                 request.getProjectName(),
                 request.getDescription()
         );
-        return new ResponseEntity<>(newProject, HttpStatus.CREATED);
+        return new ResponseEntity<>(dto, HttpStatus.CREATED);
     }
 }

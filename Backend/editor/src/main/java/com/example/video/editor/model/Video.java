@@ -8,14 +8,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 @Entity
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"project"})
 public class Video {
 
     @Id
@@ -31,6 +35,8 @@ public class Video {
 
     @Column(name = "url", nullable = false, length = 2048)
     private String url;
+    
+    private String thumbnailUrl;
 
     @Column(name = "secure_url", nullable = false, length = 2048)
     private String secureUrl;
