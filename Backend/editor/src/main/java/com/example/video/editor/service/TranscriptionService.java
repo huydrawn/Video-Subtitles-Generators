@@ -46,28 +46,56 @@ public class TranscriptionService extends ProgressTask {
 			BiConsumer<Object, String> completeCallback, BiConsumer<String, String> errorCallback, Object... params)
 			throws Exception {
 
-		progressCallback.accept(0, null);
-		String videoUrl = (String) params[0];
-		String lang = (String) params[1];
-		progressCallback.accept(5, null);
-		String pythonApiUrl = "http://localhost:5001/transcribe";
+		try {
+			// Bước 1: Khởi động task
+			progressCallback.accept(0, "Khởi tạo");
 
-		TranscriptionRequest request = new TranscriptionRequest();
-		request.setUrl(videoUrl);
-		request.setLanguage(lang);
-		progressCallback.accept(10, null);
+			// Lấy tham số từ params
+			String videoUrl = (String) params[0];
+			String lang = (String) params[1];
 
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
+			progressCallback.accept(5, "Chuẩn bị gửi yêu cầu đến Python API");
 
-		HttpEntity<TranscriptionRequest> entity = new HttpEntity<>(request, headers);
+			// Bước 2: Tạo request đến Python API để lấy phụ đề
+			String pythonApiUrl = "http://localhost:5001/transcribe";
 
-		ResponseEntity<TranscriptionResponse> response = restTemplate.exchange(pythonApiUrl, HttpMethod.POST, entity,
-				TranscriptionResponse.class);
-		progressCallback.accept(100, null);
-		var srt = response.getBody().getSrt();
-		completeCallback.accept(srt, "success");
-		// TODO Auto-generated method stub
+			TranscriptionRequest request = new TranscriptionRequest();
+			request.setUrl(videoUrl);
+			request.setLanguage(lang);
 
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			HttpEntity<TranscriptionRequest> entity = new HttpEntity<>(request, headers);
+
+			progressCallback.accept(15, "Đang gửi yêu cầu transcribe");
+
+			ResponseEntity<TranscriptionResponse> response = restTemplate.exchange(pythonApiUrl, HttpMethod.POST,
+					entity, TranscriptionResponse.class);
+
+			progressCallback.accept(60, "Nhận phản hồi thành công");
+
+			// Bước 3: Lấy nội dung phụ đề SRT
+			List<SrtSegment> srtContent = response.getBody().getSrt();
+
+			if (srtContent == null || srtContent.isEmpty()) {
+				errorCallback.accept("SUB_EMPTY", "Phụ đề rỗng hoặc không hợp lệ.");
+				return;
+			}
+
+			// (Giả sử có thể lưu file, convert sang .ass và render video ở đây)
+			progressCallback.accept(75, "Xử lý phụ đề");
+
+			// TODO: Convert srtContent sang .ass (gọi script hoặc API phụ nếu có)
+			// TODO: Render phụ đề vào video bằng FFmpeg nếu cần
+
+			// Bước 4: Hoàn tất
+			progressCallback.accept(100, "Hoàn tất");
+
+			// Gọi callback hoàn tất với phụ đề dạng SRT hoặc đường dẫn video sau render
+			completeCallback.accept(srtContent, "success");
+
+		} catch (Exception e) {
+			errorCallback.accept("SYSTEM_ERROR", "Đã xảy ra lỗi: " + e.getMessage());
+		}
 	}
 }

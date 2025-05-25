@@ -36,5 +36,13 @@ public class ProjectService {
 		return projectMapper.toDto(project);
 	}
 
+	public void reName(String projectPublicId, String newName) throws NotFoundException {
+		Project project = projectRepository.findByPublicId(projectPublicId)
+				.orElseThrow(() -> new NotFoundException("Không tìm thấy Workspace với public ID: " + projectPublicId));
+		;
+		project.setProjectName(newName);
+		projectRepository.save(project);
+	}
+
 	// Các phương thức khác liên quan đến Project
 }
