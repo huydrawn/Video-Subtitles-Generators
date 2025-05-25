@@ -1,19 +1,20 @@
 package com.example.video.editor.service;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
 import com.example.video.editor.dto.ProjectDto;
-import com.example.video.editor.dto.ProjectResponse;
 import com.example.video.editor.exception.NotFoundException;
 import com.example.video.editor.mapstruct.ProjectMapper;
-import com.example.video.editor.mapstruct.VideoMapper;
 import com.example.video.editor.model.Project;
 import com.example.video.editor.model.Workspace;
 import com.example.video.editor.repository.ProjectRepository;
 import com.example.video.editor.repository.WorkspaceRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -44,5 +45,20 @@ public class ProjectService {
 		projectRepository.save(project);
 	}
 
-	// Các phương thức khác liên quan đến Project
+	@Transactional
+	public void delete(String projectPublicId) {
+		Project project = projectRepository.findByPublicId(projectPublicId)
+				.orElseThrow(() -> new RuntimeException("Project not found with publicId: " + projectPublicId));
+
+		Workspace workspace = project.getWorkspace();
+
+		if (workspace != null) {
+			workspace.getProjects().remove(project); // Gỡ khỏi set
+			project.setWorkspace(null); // Gỡ liên kết ngược
+			workspaceRepository.save(workspace); // Hibernate sẽ xóa project nhờ orphanRemoval = true
+		} else {
+			// Trường hợp project không gắn với workspace, xóa trực tiếp
+			projectRepository.delete(project);
+		}
+	}
 }
