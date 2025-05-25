@@ -1,16 +1,21 @@
 package com.example.video.editor.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.video.editor.dto.RenameRequest;
 import com.example.video.editor.dto.WorkspaceDto;
 import com.example.video.editor.exception.NotFoundException;
 import com.example.video.editor.mapstruct.ProjectMapper;
 import com.example.video.editor.mapstruct.VideoMapper;
 import com.example.video.editor.mapstruct.WorkspaceMapper;
+import com.example.video.editor.model.SecurityUser;
 import com.example.video.editor.model.Workspace;
 import com.example.video.editor.service.WorkspaceService;
 
@@ -30,4 +35,12 @@ public class WorkspaceController {
 		WorkspaceDto dto = workspaceMapper.toDto(workspace);
 		return ResponseEntity.ok(dto);
 	}
+
+	@PostMapping
+	public ResponseEntity<?> reName(RenameRequest dto, @AuthenticationPrincipal SecurityUser user)
+			throws NotFoundException {
+		workspaceService.rename(user.getUserId(),dto.getNewName());
+		return ResponseEntity.ok("Success");
+	}
+
 }
