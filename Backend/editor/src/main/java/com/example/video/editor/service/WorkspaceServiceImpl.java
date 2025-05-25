@@ -4,10 +4,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import com.example.video.editor.exception.NotFoundException;
-import com.example.video.editor.mapstruct.ProjectMapper;
-import com.example.video.editor.mapstruct.VideoMapper;
+import com.example.video.editor.model.Project;
 import com.example.video.editor.model.User;
 import com.example.video.editor.model.Workspace;
+import com.example.video.editor.repository.ProjectRepository;
 import com.example.video.editor.repository.UserRepository;
 import com.example.video.editor.repository.WorkspaceRepository;
 
@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 public class WorkspaceServiceImpl implements WorkspaceService {
 	private final UserRepository userRepository;
 	private final WorkspaceRepository workspaceRepository;
+	private final ProjectRepository projectRepository;
 
 	@Override
 	public Workspace getByPublicId(String publicId) throws NotFoundException {
@@ -32,5 +33,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 		user.getWorkspace().setWorkspaceName(newName);
 		userRepository.save(user);
 	}
+
+	
 
 }

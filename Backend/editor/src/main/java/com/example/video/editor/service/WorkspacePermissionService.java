@@ -13,7 +13,6 @@ public class WorkspacePermissionService {
 	private final WorkspaceRepository workspaceRepository;
 
 	public boolean hasAccess(Long userId, String workspacePublicId) {
-		System.out.println("8283823");
 		return workspaceRepository.hasPermission(userId, workspacePublicId);
 	}
 }
