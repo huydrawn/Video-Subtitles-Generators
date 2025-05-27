@@ -33,9 +33,5 @@ public class SubtitlesController {
 		return ResponseEntity.ok("Video uploaded successfully: " + url);
 	}
 
-	@PostMapping("/test")
-	public ResponseEntity<String> upload() throws Exception {
-		String id = taskProcessingService.startProgressTask(new Test()); 
-		return ResponseEntity.ok(id);
-	}
+	
 }
