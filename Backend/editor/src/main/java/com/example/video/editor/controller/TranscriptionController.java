@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.video.editor.client.PythonTranscriptionClient;
 import com.example.video.editor.dto.TranscriptionRequest;
 import com.example.video.editor.model.SrtSegment;
 import com.example.video.editor.service.TranscriptionService;
@@ -18,11 +19,11 @@ import com.example.video.editor.service.TranscriptionService;
 public class TranscriptionController {
 
 	@Autowired
-	private TranscriptionService transcriptionService;
+	private PythonTranscriptionClient pythonTranscriptionClient;
 
 	@PostMapping
 	public ResponseEntity<List<SrtSegment>> getSrt(@RequestBody TranscriptionRequest request) {
-		List<SrtSegment> srtList = transcriptionService.transcribe(request.getUrl(), request.getLanguage());
-		return ResponseEntity.ok(srtList);
+		var x = pythonTranscriptionClient.transcribe(request).getSrt();
+		return ResponseEntity.ok(x);
 	}
 }

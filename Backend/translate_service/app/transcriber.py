@@ -5,12 +5,13 @@ import os
 
 model = whisper.load_model("small")
 
-def transcribe_audio(video_url, language):
+def transcribe_audio(video_url, language, translate):
     try:
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
             wav_path = temp_audio.name
             download_audio(video_url, wav_path)
-            result = model.transcribe(wav_path, language=language, task="transcribe")
+            task_type = "translate" if translate else "transcribe"
+            result = model.transcribe(wav_path, language=language, task=task_type)
 
             srt_segments = []
             for segment in result["segments"]:
