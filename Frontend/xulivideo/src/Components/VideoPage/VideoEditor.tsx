@@ -3,10 +3,11 @@ import {
     Layout, Button, Input, Select, Space, Slider,
     Typography, Grid, theme, Drawer, Upload, Tabs, Avatar, Tooltip, Dropdown,
     ConfigProvider, Switch, Row, Col, Card, Progress, // Import Progress
-    message, List, UploadProps
+    message, List, UploadProps, Modal, Radio,Checkbox
 } from 'antd';
 import type { MenuProps } from 'antd';
 import Moveable from 'react-moveable';
+import { fetchFile } from '@ffmpeg/util'; // Đảm bảo bạn có import này từ useVideoEditorLogic hoặc thêm ở đây
 
 // Import the hook, types, and components
 
@@ -47,7 +48,80 @@ const { Dragger } = Upload;
 const { TabPane } = Tabs;
 
 // --- Reusable UI Components ---
+const TranscriptionProgressIndicator: React.FC<{
+    progress: number; // Đây sẽ là giá trị đã được animate
+    fileName: string | null;
+    themeToken: ReturnType<typeof theme.useToken>['token'];
+    isTranscribingActive: boolean; // Prop để biết khi nào thực sự ẩn hẳn
+}> = ({ progress, fileName, themeToken, isTranscribingActive }) => {
+    if (!isTranscribingActive) return null; // Ẩn nếu không còn active
 
+    // Logic xác định văn bản trạng thái dựa trên progress
+    let statusText = "Transcribing...";
+    if (progress < 5) statusText = "Initializing...";
+    else if (progress < 15) statusText = "Preparing Request...";
+    else if (progress < 60) statusText = "Sending Request...";
+    else if (progress < 75) statusText = "Processing Response...";
+    else if (progress < 100) statusText = "Finalizing Subtitles...";
+    else if (progress === 100) statusText = "Transcription Complete!";
+
+    return (
+        <Card bordered={false} style={{ marginBottom: 16, marginTop: 16 }}>
+            <Space direction="vertical" align="center" style={{ width: '100%', paddingBottom: 16 }}>
+                <Title level={5} style={{ margin: 0 }}>{statusText}</Title>
+                <Progress percent={Math.round(progress)} size="small" showInfo={true} style={{ width: '100%' }} />
+            </Space>
+            {/* Phần hiển thị thanh progress nhỏ và tên file */}
+            <div style={{
+                backgroundColor: '#2c2c2c',
+                padding: '12px 16px',
+                borderRadius: 4,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    width: '100%',
+                }}>
+                    <div style={{
+                        flexGrow: 1,
+                        backgroundColor: '#555',
+                        height: 5,
+                        borderRadius: 2.5,
+                        overflow: 'hidden',
+                    }}>
+                        <div style={{
+                            backgroundColor: themeToken.colorPrimary, // Sử dụng màu chủ đạo từ theme
+                            height: '100%',
+                            width: `${progress}%`, // Độ rộng dựa trên progress
+                            transition: 'width 0.05s linear', // Hiệu ứng chuyển động mượt
+                        }}></div>
+                    </div>
+                    <span style={{
+                        fontSize: 12,
+                        color: '#ccc',
+                        minWidth: 40,
+                        textAlign: 'right',
+                    }}>
+                        {Math.round(progress)}%
+                    </span>
+                </div>
+                {/* Hiển thị tên file nếu có và progress chưa hoàn thành */}
+                {fileName && progress < 100 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <TranslationOutlined style={{ color: themeToken.colorPrimary }} />
+                        <Text type="secondary" ellipsis style={{ flexGrow: 1, color: '#ccc' }}>
+                            {fileName}
+                        </Text>
+                    </div>
+                )}
+            </div>
+        </Card>
+    );
+};
 // Integrated MediaPanel content into the main component render logic for simplicity.
 // The MediaPanel component itself might still be useful for styling the content within the sider.
 const MediaPanelContent: React.FC<{
@@ -243,7 +317,7 @@ const PreviewArea: React.FC<{ logic: VideoEditorLogic }> = ({ logic }) => {
                         display: 'block', maxWidth: '100%', maxHeight: '100%',
                         objectFit: 'contain', transformOrigin: 'center center',
                         transition: 'transform 0.1s ease-out', position: 'absolute',
-                        top:'50%', left: '50%',
+                        top:'50%', left: '45%',
                         // Apply the current zoom level to the canvas transform
                         transform: `translate(-50%, -50%) scale(${logic.previewZoomLevel})`
                     }}
@@ -699,6 +773,12 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     const iconSiderWidth = 60;
     const contextualPanelWidth = 350;
     // const propertiesPanelWidth = 350; // This is fine as a local variable if used for styling
+    const [isExportModalVisible, setIsExportModalVisible] = useState(false);
+    const [selectedImageType, setSelectedImageType] = useState<'default' | 'webp'>('default'); // 'default' (jpeg/png), 'webp'
+    const [selectedGifType, setSelectedGifType] = useState<'gif' | 'webp'>('gif');         // 'gif', 'webp' (cho ảnh động)
+    const [isExporting, setIsExporting] = useState(false); // Thêm state cho trạng thái exporting
+    const [exportProgress, setExportProgress] = useState(0); // Thêm state cho tiến trình export
+    const [removeColorOnExport, setRemoveColorOnExport] = useState(false);
 
     const srtUploadButtonProps: UploadProps = {
         name: 'file', multiple: false, accept: '.srt,.vtt', showUploadList: false,
@@ -708,6 +788,191 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     const activeSubtitleInList = logic.projectState.subtitles.find(sub =>
         logic.currentTime >= sub.startTime && logic.currentTime < sub.endTime
     );
+    const showExportModal = () => setIsExportModalVisible(true);
+    const handleExportModalCancel = () => setIsExportModalVisible(false);
+    const handleExportModalOk = async () => {
+        if (!logic.ffmpegLoaded || !logic.ffmpegRef.current) {
+            message.error("FFmpeg is not loaded. Cannot process export.");
+            if (!logic.ffmpegLoaded) logic.loadFFmpeg(); // Thử load nếu chưa load
+            return;
+        }
+        if (isExporting) {
+            message.warning("Export is already in progress.");
+            return;
+        }
+
+        const firstVideoAsset = logic.projectState.mediaAssets.find(
+            asset => asset.type.startsWith('video/') && asset.secureUrl
+        );
+
+        if (!firstVideoAsset?.secureUrl) {
+            message.error('No video asset with a secure URL found to export.');
+            setIsExportModalVisible(false);
+            return;
+        }
+
+        setIsExporting(true);
+        setExportProgress(0);
+        message.info("Starting export process...");
+
+        const ffmpeg = logic.ffmpegRef.current;
+        const inputVideoName = `input_${Date.now()}.${firstVideoAsset.secureUrl.split('.').pop() || 'mp4'}`;
+        const outputBaseName = logic.projectState.projectName.replace(/\s+/g, '_') || `export_${Date.now()}`;
+
+        // Lưu trữ callback để có thể gỡ bỏ
+        const progressCallback = ({ progress }: { progress: number; time?: number }) => {
+            setExportProgress(Math.round(progress * 100));
+        };
+
+        try {
+            // 1. Fetch video and write to FFmpeg virtual FS
+            message.info(`Fetching video: ${firstVideoAsset.name}`);
+            await ffmpeg.writeFile(inputVideoName, await fetchFile(firstVideoAsset.secureUrl));
+            message.info("Video loaded into FFmpeg.");
+
+            ffmpeg.on('progress', progressCallback);
+
+            // --- Xử lý chính: CHỈ XUẤT VIDEO ---
+            const outputVideoName = `${outputBaseName}_video.mp4`;
+            const videoExportArgs: string[] = ['-i', inputVideoName]; // Declare only once
+
+            if (removeColorOnExport) {
+                message.info("Applying desaturation filter to video. This will re-encode the video.");
+                videoExportArgs.push(
+                    '-vf', 'hue=s=0',        // Desaturation filter
+                    '-c:v', 'libx264',       // Re-encode with H.264 for video
+                    '-preset', 'medium',     // Encoding speed/quality trade-off
+                    '-crf', '23',            // Constant Rate Factor for video quality
+                    '-c:a', 'aac',           // Re-encode audio with AAC (common for MP4)
+                    '-b:a', '128k'           // Audio bitrate for AAC
+                );
+            } else {
+                // Original logic: attempt to copy codecs if no filter is applied
+                videoExportArgs.push(
+                    '-c', 'copy'             // Try to copy both video and audio codecs
+                );
+            }
+            // Add movflags and output name, common to both branches
+            videoExportArgs.push('-movflags', '+faststart', outputVideoName);
+
+
+            message.info(`Processing video: ${outputVideoName}`);
+            await ffmpeg.exec(videoExportArgs);
+            message.success("Video processing complete.");
+
+            const videoData = await ffmpeg.readFile(outputVideoName);
+            const videoBlob = new Blob([videoData], { type: 'video/mp4' });
+            const videoDownloadUrl = URL.createObjectURL(videoBlob);
+            const videoLink = document.createElement('a');
+            videoLink.href = videoDownloadUrl;
+            videoLink.download = outputVideoName;
+            document.body.appendChild(videoLink);
+            videoLink.click();
+            document.body.removeChild(videoLink);
+            URL.revokeObjectURL(videoDownloadUrl);
+            message.success(`Video "${outputVideoName}" downloaded.`);
+            await ffmpeg.deleteFile(outputVideoName);
+
+
+            // --- Xử lý xuất ảnh tĩnh (Snapshot) ---
+            const snapshotTime = '00:00:01'; // Xuất khung hình ở giây thứ 1
+            let imageOutputName = '';
+            let imageMimeType = '';
+            const imageExportArgs: string[] = [
+                '-i', inputVideoName,
+                '-ss', snapshotTime, // Thời điểm lấy snapshot
+                '-frames:v', '1',    // Chỉ lấy 1 khung hình
+            ];
+
+            if (selectedImageType === 'webp') {
+                imageOutputName = `${outputBaseName}_snapshot.webp`;
+                imageMimeType = 'image/webp';
+                imageExportArgs.push('-c:v', 'libwebp', '-lossless', '0', '-q:v', '75', imageOutputName); // -lossless 0 (lossy), -q:v 75 (quality)
+            } else { // default là JPEG
+                imageOutputName = `${outputBaseName}_snapshot.jpg`;
+                imageMimeType = 'image/jpeg';
+                imageExportArgs.push('-c:v', 'mjpeg', '-q:v', '4', imageOutputName); // -q:v 4 (chất lượng JPEG)
+            }
+
+            if (imageOutputName) {
+                message.info(`Processing snapshot: ${imageOutputName}`);
+                await ffmpeg.exec(imageExportArgs);
+                message.success("Snapshot processing complete.");
+                const imageData = await ffmpeg.readFile(imageOutputName);
+                const imageBlob = new Blob([imageData], { type: imageMimeType });
+                const imageDownloadUrl = URL.createObjectURL(imageBlob);
+                const imageLink = document.createElement('a');
+                imageLink.href = imageDownloadUrl;
+                imageLink.download = imageOutputName;
+                document.body.appendChild(imageLink);
+                imageLink.click();
+                document.body.removeChild(imageLink);
+                URL.revokeObjectURL(imageDownloadUrl);
+                message.success(`Snapshot "${imageOutputName}" downloaded.`);
+                await ffmpeg.deleteFile(imageOutputName);
+            }
+
+            // --- Xử lý xuất GIF/WEBP động (Ví dụ: 5 giây đầu tiên) ---
+            let animOutputName = '';
+            let animMimeType = '';
+            const animDuration = '5'; // Lấy 5 giây
+            const animExportArgsBase: string[] = [ // Renamed to avoid conflict if we were to make it conditional
+                '-i', inputVideoName,
+                '-t', animDuration, // Thời lượng của ảnh động
+                '-vf', 'fps=15,scale=320:-1:flags=lanczos', // Giảm fps và kích thước để file nhỏ hơn
+            ];
+            let finalAnimExportArgs = [...animExportArgsBase];
+
+
+            if (selectedGifType === 'webp') {
+                animOutputName = `${outputBaseName}_animation.webp`;
+                animMimeType = 'image/webp';
+                finalAnimExportArgs.push('-c:v', 'libwebp', '-loop', '0', '-lossless', '0', '-q:v', '70', '-preset', 'picture', animOutputName);
+            } else { // 'gif'
+                animOutputName = `${outputBaseName}_animation.gif`;
+                animMimeType = 'image/gif';
+                const paletteName = 'palette.png';
+                await ffmpeg.exec([
+                    '-i', inputVideoName, '-t', animDuration,
+                    '-vf', `fps=15,scale=320:-1:flags=lanczos,palettegen`,
+                    '-y', paletteName
+                ]);
+                finalAnimExportArgs.push('-i', paletteName, '-lavfi', 'fps=15,scale=320:-1:flags=lanczos [x]; [x][1:v] paletteuse', animOutputName);
+            }
+
+            if (animOutputName) {
+                message.info(`Processing animation: ${animOutputName}`);
+                await ffmpeg.exec(finalAnimExportArgs);
+                message.success("Animation processing complete.");
+                const animData = await ffmpeg.readFile(animOutputName);
+                const animBlob = new Blob([animData], { type: animMimeType });
+                const animDownloadUrl = URL.createObjectURL(animBlob);
+                const animLink = document.createElement('a');
+                animLink.href = animDownloadUrl;
+                animLink.download = animOutputName;
+                document.body.appendChild(animLink);
+                animLink.click();
+                document.body.removeChild(animLink);
+                URL.revokeObjectURL(animDownloadUrl);
+                message.success(`Animation "${animOutputName}" downloaded.`);
+                await ffmpeg.deleteFile(animOutputName);
+                if (selectedGifType === 'gif') await ffmpeg.deleteFile('palette.png');
+            }
+
+
+            // Cleanup input file
+            await ffmpeg.deleteFile(inputVideoName);
+
+        } catch (error) {
+            console.error("Error during FFmpeg export:", error);
+            message.error(`Export failed: ${error instanceof Error ? error.message : String(error)}`);
+        } finally {
+            ffmpeg.off('progress', progressCallback); // Gỡ bỏ listener
+            setIsExporting(false);
+            setExportProgress(0);
+            setIsExportModalVisible(false); // Đóng modal sau khi hoàn tất hoặc lỗi
+        }
+    };
 
     return (
         <ConfigProvider theme={{ algorithm: theme.darkAlgorithm, token: { colorPrimary: '#7B61FF', motion: false } }}>
@@ -741,7 +1006,13 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
                             )}
                             {logic.selectedMenuKey === 'subtitles' && (
                                 <div style={{ padding: 16, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                    {logic.projectState.subtitles && logic.projectState.subtitles.length > 0 ? (
+                                    <TranscriptionProgressIndicator
+                                        progress={logic.transcriptionProgress}
+                                        fileName={logic.transcribingFileName}
+                                        themeToken={token} // token từ theme.useToken()
+                                        isTranscribingActive={logic.isTranscribing}
+                                    />
+                                    {logic.projectState.subtitles && logic.projectState.subtitles.length > 0 && !logic.isTranscribing ? (
                                         <>
                                             <div style={{marginBottom: 12, display: 'flex', flexDirection: 'column'}}>
                                                 <Title level={5} style={{ margin: '0 0 8px 0' }}>Subtitles</Title>
@@ -782,10 +1053,7 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
                                                     </div>
                                                     {/* Placeholder settings */}
                                                     <Space size="small" style={{fontSize: '12px', alignItems: 'center'}}>
-                                                        <Text type="secondary">Chars per subtitle:</Text> <Text strong>92</Text>
-                                                        <Switch size="small" checked={false} disabled style={{marginLeft: 8}} />
-                                                        <Text type="secondary">Smart tools</Text>
-                                                        <Button type="text" size="small" icon={<CaretDownOutlined />} disabled />
+
                                                     </Space>
                                                 </div>
                                                 {/* End Subtitle Settings */}
@@ -807,6 +1075,8 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
                                             </div>
                                         </>
                                     ) : (
+                                        !logic.isTranscribing && (!logic.projectState.subtitles || logic.projectState.subtitles.length === 0) && (
+
                                         <>
                                             <Title level={5} style={{ margin: '0 0 16px 0' }}>Add Subtitles</Title>
                                             <Upload {...srtUploadButtonProps}> {/* Use srt specific props */}
@@ -814,10 +1084,23 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
                                                     <div style={{ textAlign: 'center', padding: '8px 0' }}> <InboxOutlined style={{ fontSize: 30, color: token.colorPrimary }} /><Title level={5} style={{ margin: '8px 0 4px 0' }}>Upload SRT / VTT</Title><Text type="secondary" style={{ fontSize: 12 }}>Use a subtitle file</Text> </div>
                                                 </Card>
                                             </Upload>
-                                            <Card hoverable style={{ cursor: 'pointer' }} onClick={logic.handleStartFromScratch}>
+                                            <div // Wrapper cho Card "Start from scratch"
+                                                onClick={() => {
+                                                    if (!logic.isTranscribing) { // Chỉ cho phép click khi không đang transcribing
+                                                        logic.handleStartFromScratch(); // Gọi hàm xử lý từ hook
+                                                    }
+                                                }}
+                                                style={{ // Style để vô hiệu hóa click và làm mờ
+                                                    cursor: logic.isTranscribing ? 'not-allowed' : 'pointer',
+                                                    opacity: logic.isTranscribing ? 0.5 : 1,
+                                                }}
+                                            >
+                                            <Card hoverable={!logic.isTranscribing} style={{ cursor: 'pointer' }} onClick={logic.handleStartFromScratch}>
                                                 <div style={{ textAlign: 'center', padding: '8px 0' }}> <PlusOutlined style={{ fontSize: 30, color: token.colorPrimary }} /><Title level={5} style={{ margin: '8px 0 4px 0' }}>Start from scratch</Title><Text type="secondary" style={{ fontSize: 12 }}>Type out your subtitles</Text> </div>
                                             </Card>
+                                            </div>
                                         </>
+                                        )
                                     )}
                                 </div>
                             )}
@@ -863,9 +1146,29 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
                                 </Space>
                             )}
                         </Space>
-                        <Space><Text type="secondary" style={{fontSize: '12px'}}>Last edited a few seconds ago</Text></Space>
-                        <Space size="middle">
-                            <Button type="primary" size="small" disabled>Upgrade ✨</Button>
+                        <Button onClick={showExportModal} icon={<DownloadOutlined />}>
+                            Export Project
+                        </Button>
+                        <Space size="middle" style={{marginRight:'30px'}}>
+                            <Button
+                                type="primary"
+                                size="small"
+                                onClick={logic.handleBurnSubtitlesWithFFmpeg} // <--- CORRECTED METHOD NAME
+                                disabled={
+                                    logic.editorState === 'processing_video' || // Disable if already processing
+                                    logic.isBurningSubtitles || // Disable if FFmpeg burning is in progress (from useVideoEditorLogic)
+                                    logic.editorState === 'uploading' ||
+                                    !logic.projectState.subtitles ||
+                                    logic.projectState.subtitles.length === 0 ||
+                                    !(logic.selectedVideoSecureUrl || logic.projectState.mediaAssets.some(asset => asset.type.startsWith("video/") && asset.secureUrl)) ||
+                                    !logic.ffmpegLoaded // Disable if FFmpeg isn't loaded
+                                }
+                                loading={logic.isBurningSubtitles} // Show loading when FFmpeg is burning
+                            >
+                                {logic.isBurningSubtitles
+                                    ? `Burning... ${logic.burningProgress}%` // Show FFmpeg burning progress
+                                    : 'Burn Subtitles'} {/* Changed button text for clarity */}
+                            </Button>
                             <Button icon={<ShareAltOutlined />} disabled>Share</Button>
                             <Button type="primary" icon={<DownloadOutlined />} style={{ background: token.colorPrimary, borderColor: token.colorPrimary }} disabled>Export Project</Button>
                             <Dropdown menu={{ items: [{key: '1', label: 'Profile'}, {key: '2', label: 'Logout'}] }} placement="bottomRight">
@@ -873,65 +1176,106 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
                             </Dropdown>
                         </Space>
                     </Header>
+                    <Modal
+                        title="Export Settings"
+                        open={isExportModalVisible}
+                        onOk={handleExportModalOk}
+                        onCancel={handleExportModalCancel}
+                        okText="Export Project"
+                        cancelText="Cancel"
+                        confirmLoading={isExporting} // Show loading on OK button while exporting
+                    >
+                        <Space direction="vertical" size="large" style={{ width: '100%', marginTop: 20 }}>
+                            {isExporting && <Progress percent={exportProgress} style={{marginBottom: 16}} />}
+                            <div>
+                                <Text strong>Image type:</Text>
+                                <Radio.Group
+                                    onChange={(e) => setSelectedImageType(e.target.value)}
+                                    value={selectedImageType}
+                                    style={{ marginLeft: 8 }}
+                                    optionType="button"
+                                    buttonStyle="solid"
+                                >
+                                    <Radio.Button value="default">Default</Radio.Button>
+                                    <Radio.Button value="webp">WEBP</Radio.Button>
+                                </Radio.Group>
+                                <Text type="secondary" style={{ display: 'block', marginLeft: 8, marginTop: 4 }}>
+                                    {selectedImageType === 'default'
+                                        ? 'Image output will be JPEG or PNG.'
+                                        : 'Image output will be WEBP.'}
+                                </Text>
+                            </div>
+                            <div>
+                                <Text strong>GIF type:</Text>
+                                <Radio.Group
+                                    onChange={(e) => setSelectedGifType(e.target.value)}
+                                    value={selectedGifType}
+                                    style={{ marginLeft: 8 }}
+                                    optionType="button"
+                                    buttonStyle="solid"
+                                >
+                                    <Radio.Button value="webp">WEBP</Radio.Button>
+                                    <Radio.Button value="gif">GIF</Radio.Button>
+                                </Radio.Group>
+                                <Text type="secondary" style={{ display: 'block', marginLeft: 8, marginTop: 4 }}>
+                                    {selectedGifType === 'gif'
+                                        ? 'GIF output will be GIF file format. We recommend the WEBP file format.'
+                                        : 'GIF output will be WEBP file format.'}
+                                </Text>
+                            </div>
+                            <div>
+                                <Checkbox
+                                    checked={removeColorOnExport}
+                                    onChange={(e) => setRemoveColorOnExport(e.target.checked)}
+                                >
+                                    Remove Color (Desaturate Video)
+                                </Checkbox>
+                                <Text type="secondary" style={{ display: 'block', marginLeft: 24, marginTop: 4 }}>
+                                    Exports the main video in black and white. This will re-encode the video.
+                                </Text>
+                            </div>
+                        </Space>
+                    </Modal>
+
 
                     {/* Center Area (Preview + Properties) - Takes remaining vertical space, flows horizontally */}
-                    <Layout style={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
+                    <Layout style={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'row', marginRight: '80px' }}>
                         {/* Preview Area - Takes remaining horizontal space */}
-                        <Content style={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <Content style={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', marginRight: '50px' }}>
                             {/* Show InitialScreen ONLY if NO media assets exist AND not currently uploading */}
                             {(logic.projectState.mediaAssets.length === 0 && !logic.uploadingFile)
                                 ? <InitialScreen logic={logic} />
                                 : <PreviewArea logic={logic} /> // Pass logic down
                             }
-                            {/* Show a different loading indicator or keep PreviewArea mounted during media upload */}
-                            {/*{logic.editorState === 'uploading' && logic.projectState.mediaAssets.length === 0 && logic.uploadingFile && (*/}
-                            {/*    <div style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>*/}
-                            {/*        <Card>*/}
-                            {/*            <Space direction="vertical" align="center">*/}
-                            {/*                <Title level={5} style={{ margin: 0 }}>Processing Media...</Title>*/}
-                            {/*                <Text type="secondary" ellipsis>*/}
-                            {/*                    {typeof logic.uploadingFile === 'string'*/}
-                            {/*                        ? logic.uploadingFile*/}
-                            {/*                        : logic.uploadingFile?.name || 'Unknown file'}*/}
-                            {/*                </Text>*/}
-                            {/*                <Progress percent={logic.uploadProgress} size="small" showInfo={true} />*/}
-                            {/*            </Space>*/}
-                            {/*        </Card>*/}
-                            {/*    </div>*/}
-                            {/*)}*/}
                         </Content>
                         {/* Properties Panel */}
                         {logic.editorState === 'editor' && !screens.xs && (
-                            <Sider width={350} theme="dark" className="properties-sider" style={{ height: '100%', overflow: 'hidden', flexShrink: 0 }}>
-                                {/* The actual content div inside the sider that gets the white background and scrolling */}
-                                {/* The CSS rules for .ant-layout-sider-children target this area */}
-                                <div className="properties-panel-content-area"> {/* Added a class for easier targeting if needed */}
-                                    <PropertiesPanel
-                                        selectedClip={logic.selectedClip}
-                                        currentTime={logic.currentTime}
-                                        updateSelectedClipProperty={logic.updateSelectedClipProperty}
-                                        updateSelectedClipText={logic.updateSelectedClipText}
-                                        addOrUpdateKeyframe={logic.addOrUpdateKeyframe}
-                                        onDeleteClip={logic.handleDeleteClip}
-                                        // Pass subtitle state and handlers
-                                        subtitleFontFamily={logic.projectState.subtitleFontFamily}
-                                        updateSubtitleFontFamily={logic.updateSubtitleFontFamily}
-                                        subtitleFontSize={logic.projectState.subtitleFontSize}
-                                        updateSubtitleFontSize={logic.updateSubtitleFontSize}
-                                        subtitleTextAlign={logic.projectState.subtitleTextAlign as 'left' | 'center' | 'right'} // Cast to specific union type
-                                        updateSubtitleTextAlign={logic.updateSubtitleTextAlign}
-                                        isSubtitleBold={logic.projectState.isSubtitleBold}
-                                        toggleSubtitleBold={logic.toggleSubtitleBold}
-                                        isSubtitleItalic={logic.projectState.isSubtitleItalic}
-                                        toggleSubtitleItalic={logic.toggleSubtitleItalic}
-                                        isSubtitleUnderlined={logic.projectState.isSubtitleUnderlined}
-                                        toggleSubtitleUnderlined={logic.toggleSubtitleUnderlined}
-                                        subtitleColor={logic.projectState.subtitleColor}
-                                        updateSubtitleColor={logic.updateSubtitleColor}
-                                        subtitleBackgroundColor={logic.projectState.subtitleBackgroundColor}
-                                        updateSubtitleBackgroundColor={logic.updateSubtitleBackgroundColor}
-                                    />
-                                </div>
+                            <Sider width={340} theme="dark" className="properties-sider" style={{ height: '100%', overflow: 'hidden', flexShrink: 0 }}>
+                                <PropertiesPanel
+                                    selectedClip={logic.selectedClip}
+                                    currentTime={logic.currentTime}
+                                    updateSelectedClipProperty={logic.updateSelectedClipProperty}
+                                    updateSelectedClipText={logic.updateSelectedClipText}
+                                    addOrUpdateKeyframe={logic.addOrUpdateKeyframe}
+                                    onDeleteClip={logic.handleDeleteClip}
+                                    // Pass subtitle state and handlers
+                                    subtitleFontFamily={logic.projectState.subtitleFontFamily}
+                                    updateSubtitleFontFamily={logic.updateSubtitleFontFamily}
+                                    subtitleFontSize={logic.projectState.subtitleFontSize}
+                                    updateSubtitleFontSize={logic.updateSubtitleFontSize}
+                                    subtitleTextAlign={logic.projectState.subtitleTextAlign as 'left' | 'center' | 'right'} // Cast to specific union type
+                                    updateSubtitleTextAlign={logic.updateSubtitleTextAlign}
+                                    isSubtitleBold={logic.projectState.isSubtitleBold}
+                                    toggleSubtitleBold={logic.toggleSubtitleBold}
+                                    isSubtitleItalic={logic.projectState.isSubtitleItalic}
+                                    toggleSubtitleItalic={logic.toggleSubtitleItalic}
+                                    isSubtitleUnderlined={logic.projectState.isSubtitleUnderlined}
+                                    toggleSubtitleUnderlined={logic.toggleSubtitleUnderlined}
+                                    subtitleColor={logic.projectState.subtitleColor}
+                                    updateSubtitleColor={logic.updateSubtitleColor}
+                                    subtitleBackgroundColor={logic.projectState.subtitleBackgroundColor}
+                                    updateSubtitleBackgroundColor={logic.updateSubtitleBackgroundColor}
+                                />
                             </Sider>
                         )}
                     </Layout>

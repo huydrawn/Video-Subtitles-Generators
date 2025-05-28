@@ -83,6 +83,7 @@ export class MediaElementManager {
                                 const videoWidth = video.videoWidth;
                                 const videoHeight = video.videoHeight;
                                 console.log(`Video metadata loaded for ${clip.name || clip.id} (src: ${video.src.substring(0,60)}): dur=${actualDuration}, dim=${videoWidth}x${videoHeight}`);
+                                console.log(video.src);
 
 
                                 const clipFromState = currentProjectState.tracks.flatMap(t => t.clips).find(c => c.id === clip.id);
