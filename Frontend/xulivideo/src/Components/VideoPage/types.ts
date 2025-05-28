@@ -1,4 +1,4 @@
-// --- types.ts content (corrected) ---
+// --- types.ts content (corrected and enhanced) ---
 export interface ThumbnailInfo {
     time: number;
     url: string;
@@ -6,128 +6,120 @@ export interface ThumbnailInfo {
 
 export interface Keyframe {
     time: number;
-    // Note: value type can be expanded based on needs (e.g., color string, boolean)
     value: number | { x: number; y: number } | string | any;
 }
 export type SubtitleTextAlign = 'left' | 'center' | 'right';
-// Define allowed clip types explicitly
 export type ClipType = 'video' | 'image' | 'text';
 
 export interface Clip {
     id: string;
-    type: ClipType; // Use the defined type
-    source: string | File; // Source could be a blob URL, http URL (secureUrl), or the original File object
-    trackId: string; // The ID of the track this clip belongs to
-    startTime: number; // Start time of the clip on the timeline (in seconds)
-    endTime: number; // End time of the clip on the timeline (in seconds)
-    duration: number; // Duration of the clip on the timeline (in seconds) - Note: for video, this might be updated after metadata loads
-    // Properties for visual transformation on the canvas
-    position: { x: number; y: number }; // Normalized position {0-1} relative to canvas center
-    scale: { x: number; y: number };   // Scale factor relative to original size
-    rotation: number;                  // Rotation in degrees
-    opacity: number;                   // Opacity {0-1}
-    // Keyframes for animating properties over time
+    type: ClipType;
+    source: string | File;
+    trackId: string;
+    startTime: number;
+    endTime: number;
+    duration: number;
+    position: { x: number; y: number };
+    scale: { x: number; y: number };
+    rotation: number;
+    opacity: number;
     keyframes: {
         position?: Keyframe[];
         scale?: Keyframe[];
         rotation?: Keyframe[];
         opacity?: Keyframe[];
-        // Add other properties here as needed for animation
     };
-    originalWidth?: number;  // Original dimensions of the media (video/image)
-    originalHeight?: number; // Used for scaling calculations
-    name?: string;           // Display name for the clip (e.g., filename)
-    thumbnailUrls?: ThumbnailInfo[]; // URLs of generated thumbnails for the timeline
-    secureUrl?: string; // It's redundant here if source is the secureUrl, but keeping it doesn't hurt and might be used elsewhere. The primary source of truth after upload is `source`.
-
-    // --- ADDED: Properties for text clips (non-subtitles) ---
-    color?: string;       // Text color (e.g., '#FFFFFF' or 'rgba(...)')
-    fontSize?: number;    // Font size (e.g., 50)
-    fontFamily?: string;  // Font family (e.g., 'Arial')
-    // -----------------------------------------------------
+    originalWidth?: number;
+    originalHeight?: number;
+    name?: string;
+    thumbnailUrls?: ThumbnailInfo[];
+    secureUrl?: string;
+    color?: string;
+    fontSize?: number;
+    fontFamily?: string;
 }
 
 export interface Track {
     id: string;
     clips: Clip[];
-    // Add track-specific properties here if needed (e.g., name, mute state, lock state)
 }
 
 export interface SrtSegment {
-    start: string; // e.g., "00:00:00,000"
-    end: string;   // e.g., "00:00:12,000"
+    start: string;
+    end: string;
     text: string;
 }
 
 export interface MediaAsset {
     id: string;
     name: string;
-    file?: File; // <<< MADE OPTIONAL TO HANDLE LOADING FROM URL
-    type: string; // MIME type (e.g., 'video/mp4', 'image/png')
-    objectURL?: string; // <<< ĐẢM BẢO THUỘC TÍNH objectURL CÓ Ở ĐÂY (for local blob URLs before upload/processing)
-    secureUrl?: string; // <<< ĐẢM BẢO THUỘC TÍNH secureUrl CÓ Ở ĐÂY (for the permanent backend URL)
+    file?: File;
+    type: string;
+    objectURL?: string;
+    secureUrl?: string;
 }
 
-// --- New Type for Subtitle Entries ---
 export interface SubtitleEntry {
-    id: string;       // Unique ID for react keys and selection/editing
-    startTime: number; // Start time of the subtitle (in seconds)
-    endTime: number;   // End time of the subtitle (in seconds)
-    text: string;      // The subtitle text
+    id: string;
+    startTime: number;
+    endTime: number;
+    text: string;
 }
 
+// --- NEW: Unified Editor Status Type ---
+export type EditorStatus =
+    | 'initial'
+    | 'uploading'
+    | 'transcribing'
+    | 'processing_video' // This was the key missing piece for PlaybackController
+    | 'editor';
+// --- End: Unified Editor Status Type ---
 
-// --- Updated Editor Project State ---
 export interface EditorProjectState {
     projectName: string;
     tracks: Track[];
     mediaAssets: MediaAsset[];
     canvasDimensions: { width: number; height: number };
-    totalDuration: number; // Total duration of the project (usually based on the last clip's end time)
-    selectedClipId: string | null; // ID of the currently selected clip
+    totalDuration: number;
+    selectedClipId: string | null;
     isPlaying: boolean;
     isPreviewMuted: boolean;
     playbackRate: number;
-
-    // --- Upload State (ADDED) ---
-    // State variables to track the status of a manual upload process
-    uploadProgress: number; // Progress percentage (0-100)
-    uploadingFile: File | string | null;  // Đổi kiểu ở đây, cho phép nhận cả File và string (File during HTTP upload, string for status messages like "Transcribing")
-
-    currentUploadTaskId: string | null; // Task ID from the backend for tracking progress via WS
-    uploadTimeRemaining?: string; // <<< CẬP NHẬT STATE cho thời gian còn lại
-
-    // ----------------------------
-
-    // --- Preview Zoom State ---
-    previewZoomLevel: number; // Current numerical zoom level
-    previewZoomMode: string;  // Current zoom mode ('fit', 'fill', or percentage string)
-
-    // --- Subtitle State ---
-    subtitles: SubtitleEntry[]; // Array of subtitle entries
-    subtitleFontFamily: string; // Global font family for subtitles
-    subtitleFontSize: number;   // Global font size for subtitles (in pixels at 720p canvas height)
-    subtitleTextAlign: 'left' | 'center' | 'right'; // <--- ADDED: Global text alignment for subtitles
-
-    // --- ADDED: Global Subtitle Text Styles ---
+    uploadProgress: number;
+    uploadingFile: File | string | null;
+    currentUploadTaskId: string | null;
+    uploadTimeRemaining?: string;
+    previewZoomLevel: number;
+    previewZoomMode: string;
+    subtitles: SubtitleEntry[];
+    subtitleFontFamily: string;
+    subtitleFontSize: number;
+    subtitleTextAlign: SubtitleTextAlign; // Corrected to use the defined type
     isSubtitleBold: boolean;
     isSubtitleItalic: boolean;
     isSubtitleUnderlined: boolean;
-    subtitleColor: string; // <--- ADDED: Global text color for subtitles (hex string)
-    subtitleBackgroundColor: string; // <--- ADDED: Global background color for subtitles (hex or rgba string)
-
-
-    // Note: The editorState property was previously part of this interface in some examples,
-    // but in the latest useVideoEditorLogic provided, editorState is a separate useState.
-    // Based on the latest code structure, editorState is NOT be in EditorProjectState.
-    // If it was intended to be part of projectState, the hook would need modification.
-    // Sticking to the structure implied by the hook code: editorState is separate.
-    // The MediaPanelProps still receives editorState separately, which confirms this.
+    subtitleColor: string;
+    subtitleBackgroundColor: string;
+    processingProgress?: number;
 }
+
+// For useVideoEditorLogic.ts, SubtitleManager.ts, UploadManager.ts,
+// they will use this EditorStatus type for their setEditorState dispatch.
+// Example: setEditorState: Dispatch<SetStateAction<EditorStatus>>;
+
+// For PlaybackController.ts, its methods should accept EditorStatus.
+// Example (in PlaybackController):
+// public renderLoop = (..., editorState: EditorStatus, ...): void => { ... }
+// public handlePlayPause = (..., editorState: EditorStatus): void => { ... }
 
 
 // Type for the return value of the logic hook
-// This uses ReturnType to infer the exact shape returned by useVideoEditorLogic
-// Ensure the path is correct relative to this types file
-// Assuming useVideoEditorLogic.ts is in the same directory
-export type VideoEditorLogic = ReturnType<typeof import('./useVideoEditorLogic').useVideoEditorLogic>;
+// This will also need to reflect that setEditorState uses EditorStatus
+// And editorState itself is of type EditorStatus
+export type VideoEditorLogic = Omit<
+    ReturnType<typeof import('./useVideoEditorLogic').useVideoEditorLogic>,
+    'editorState' | 'setEditorState'
+> & {
+    editorState: EditorStatus;
+    setEditorState: React.Dispatch<React.SetStateAction<EditorStatus>>;
+};

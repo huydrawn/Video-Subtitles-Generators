@@ -778,3 +778,6 @@
     margin-right: 100px;
     position: absolute;
 }
+.properties-sider .ant-layout-sider-children{
+    margin-left:0px;
+}
