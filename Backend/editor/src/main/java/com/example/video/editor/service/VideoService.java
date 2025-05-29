@@ -25,6 +25,7 @@ public class VideoService {
 	private final Cloudinary cloudinary; // Inject Cloudinary bean
 
 	public Video uploadVideoToCloudinary(byte[] fileBytes, String title) throws IOException {
+		System.out.println(title);
 		Map uploadResult = cloudinary.uploader().upload(fileBytes,
 				ObjectUtils.asMap("resource_type", "video", "folder", "video_editor", "eager", Arrays.asList(
 						new Transformation().width(300).height(200).crop("fill").startOffset("5").fetchFormat("jpg"))));
