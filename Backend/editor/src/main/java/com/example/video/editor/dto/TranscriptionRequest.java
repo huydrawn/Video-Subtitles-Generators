@@ -6,5 +6,6 @@ import lombok.Data;
 public class TranscriptionRequest {
 	private String url;
 	private String language;
+	private boolean translate;
 	// Getters and Setters
 }

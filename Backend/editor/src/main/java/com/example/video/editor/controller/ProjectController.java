@@ -1,5 +1,6 @@
 package com.example.video.editor.controller;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +29,7 @@ public class ProjectController {
 
 	@PostMapping
 	@PreAuthorize("@workspacePermission.hasAccess(#user.userId, #workspacePublicId)")
+	@CacheEvict(key = "#user.userId")
 	public ResponseEntity<?> createProject(@PathVariable String workspacePublicId,
 			@RequestBody ProjectCreationRequest request, @AuthenticationPrincipal SecurityUser user)
 			throws NotFoundException {

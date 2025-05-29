@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.example.video.editor.client.PythonTranscriptionClient;
 import com.example.video.editor.dto.TranscriptionRequest;
 import com.example.video.editor.dto.TranscriptionResponse;
 import com.example.video.editor.model.SrtSegment;
@@ -21,25 +22,7 @@ import com.example.video.editor.service.progess.ProgressTask;
 public class TranscriptionService extends ProgressTask {
 
 	@Autowired
-	private RestTemplate restTemplate;
-
-	public List<SrtSegment> transcribe(String videoUrl, String language) {
-		String pythonApiUrl = "http://localhost:5001/transcribe";
-
-		TranscriptionRequest request = new TranscriptionRequest();
-		request.setUrl(videoUrl);
-		request.setLanguage(language);
-
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-
-		HttpEntity<TranscriptionRequest> entity = new HttpEntity<>(request, headers);
-
-		ResponseEntity<TranscriptionResponse> response = restTemplate.exchange(pythonApiUrl, HttpMethod.POST, entity,
-				TranscriptionResponse.class);
-
-		return response.getBody().getSrt();
-	}
+	private PythonTranscriptionClient pythonTranscriptionClient;
 
 	@Override
 	protected void executeTask(BiConsumer<Integer, String> progressCallback,
@@ -51,31 +34,18 @@ public class TranscriptionService extends ProgressTask {
 			progressCallback.accept(0, "Khởi tạo");
 
 			// Lấy tham số từ params
-			String videoUrl = (String) params[0];
-			String lang = (String) params[1];
+			TranscriptionRequest request = (TranscriptionRequest) params[0];
 
 			progressCallback.accept(5, "Chuẩn bị gửi yêu cầu đến Python API");
 
-			// Bước 2: Tạo request đến Python API để lấy phụ đề
-			String pythonApiUrl = "http://localhost:5001/transcribe";
-
-			TranscriptionRequest request = new TranscriptionRequest();
-			request.setUrl(videoUrl);
-			request.setLanguage(lang);
-
-			HttpHeaders headers = new HttpHeaders();
-			headers.setContentType(MediaType.APPLICATION_JSON);
-			HttpEntity<TranscriptionRequest> entity = new HttpEntity<>(request, headers);
+			TranscriptionResponse transcriptionResponse = pythonTranscriptionClient.transcribe(request);
 
 			progressCallback.accept(15, "Đang gửi yêu cầu transcribe");
-
-			ResponseEntity<TranscriptionResponse> response = restTemplate.exchange(pythonApiUrl, HttpMethod.POST,
-					entity, TranscriptionResponse.class);
 
 			progressCallback.accept(60, "Nhận phản hồi thành công");
 
 			// Bước 3: Lấy nội dung phụ đề SRT
-			List<SrtSegment> srtContent = response.getBody().getSrt();
+			List<SrtSegment> srtContent = transcriptionResponse.getSrt();
 
 			if (srtContent == null || srtContent.isEmpty()) {
 				errorCallback.accept("SUB_EMPTY", "Phụ đề rỗng hoặc không hợp lệ.");
