@@ -51,7 +51,7 @@ public class SaveSubtitlesService extends ProgressTask {
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
 			String line;
 			while ((line = reader.readLine()) != null) {
-				
+
 			}
 		}
 
@@ -91,29 +91,49 @@ public class SaveSubtitlesService extends ProgressTask {
 	protected void executeTask(BiConsumer<Integer, String> progressCallback,
 			BiConsumer<Object, String> completeCallback, BiConsumer<String, String> errorCallback, Object... params)
 			throws Exception {
-		byte[] fileSub = (byte[]) params[0];
-		String projectPublicId = (String) params[1];
+		try {
+			// Bước 0: Nhận dữ liệu và xác thực
+			progressCallback.accept(0, "Bắt đầu xử lý...");
+			byte[] fileSub = (byte[]) params[0];
+			String projectPublicId = (String) params[1];
 
-		Project project = projectRepository.findByPublicId(projectPublicId)
-				.orElseThrow(() -> new NotFoundException(projectPublicId));
+			progressCallback.accept(10, "Đang tìm project...");
+			Project project = projectRepository.findByPublicId(projectPublicId)
+					.orElseThrow(() -> new NotFoundException(projectPublicId));
 
-		Video video = project.getVideo();
+			Video video = project.getVideo();
+			String urlVideo = video.getUrl();
 
-		String urlVideo = video.getUrl();
+			// Bước 1: Tải video từ Cloudinary
+			progressCallback.accept(30, "Đang tải video từ Cloudinary...");
+			File videoFile = loadFileFromCloudinaryVideoUrl(urlVideo);
 
-		File videoFile = loadFileFromCloudinaryVideoUrl(urlVideo);
+			// Bước 2: Ghi phụ đề vào file tạm thời
+			progressCallback.accept(50, "Đang ghi phụ đề...");
+			File tempAssFile = File.createTempFile("subtitle-", ".ass");
+			Files.write(tempAssFile.toPath(), fileSub);
 
-		File tempAssFile = File.createTempFile("subtitle-", ".ass");
-		Files.write(tempAssFile.toPath(), fileSub);
-		
-		File subbedFile = addSubtitleToVideo(videoFile, tempAssFile);
-		
-		Video newVideo = videoService.uploadVideoToCloudinary(Files.readAllBytes(subbedFile.toPath()), subbedFile.getName());
-		
-		
-		project.setVideo(newVideo);
-		
-		projectRepository.save(project);
+			// Bước 3: Gắn phụ đề vào video
+			progressCallback.accept(70, "Đang gắn phụ đề vào video...");
+			File subbedFile = addSubtitleToVideo(videoFile, tempAssFile);
+
+			// Bước 4: Upload video mới lên Cloudinary
+			progressCallback.accept(90, "Đang upload video mới...");
+			Video newVideo = videoService.uploadVideoToCloudinary(Files.readAllBytes(subbedFile.toPath()),
+					subbedFile.getName());
+
+			// Bước 5: Cập nhật lại project
+			project.setVideo(newVideo);
+			projectRepository.save(project);
+
+			// Hoàn tất
+			progressCallback.accept(100, "Hoàn tất");
+			completeCallback.accept(newVideo.getUrl(), "Hoàn tất upload video");
+
+		} catch (Exception e) {
+			errorCallback.accept("Lỗi khi xử lý video", e.getMessage());
+			throw e; // hoặc bạn có thể chọn không throw nếu đã xử lý ở errorCallback
+		}
 	}
 
 }
