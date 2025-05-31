@@ -25,7 +25,7 @@ public class VideoUploadController {
 	@PostMapping("/{publicProjectId}/videos")
 	public ResponseEntity<String> uploadVideoToProject(@RequestParam("file") MultipartFile file,
 			@PathVariable String publicProjectId) throws IOException {
-		
+
 		byte[] fileBytes = file.getBytes();
 		String id = taskProcessingService.startProgressTask(fileUploadService, fileBytes, file.getOriginalFilename(),
 				publicProjectId);

@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.video.editor.service.CloudinaryService;
-import com.example.video.editor.service.autoSub.AudioService;
 import com.example.video.editor.service.progess.TaskProcessingService;
 
 @RestController
@@ -19,8 +18,7 @@ import com.example.video.editor.service.progess.TaskProcessingService;
 public class SubtitlesController {
 	@Autowired
 	CloudinaryService cloudinaryService;
-	@Autowired
-	AudioService audioService;
+	
 	@Autowired
 	TaskProcessingService taskProcessingService;
 

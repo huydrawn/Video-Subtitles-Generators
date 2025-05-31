@@ -1,5 +1,6 @@
 package com.example.video.editor.service;
 
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import com.example.video.editor.exception.NotFoundException;
@@ -11,7 +12,7 @@ import com.example.video.editor.repository.UserRepository;
 import com.example.video.editor.repository.WorkspaceRepository;
 
 import lombok.RequiredArgsConstructor;
-
+@Component
 @Service
 @RequiredArgsConstructor
 public class WorkspaceServiceImpl implements WorkspaceService {

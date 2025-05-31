@@ -64,7 +64,7 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http,
-			ClientRegistrationRepository clientRegistrationRepository) throws Exception {
+												   ClientRegistrationRepository clientRegistrationRepository) throws Exception {
 		http.csrf(csrf -> csrf.disable())
 				.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers(SecurityConstants.PUBLIC_URLS.toArray(new String[0])).permitAll().anyRequest()
