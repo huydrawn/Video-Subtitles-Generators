@@ -781,3 +781,24 @@
 .properties-sider .ant-layout-sider-children{
     margin-left:0px;
 }
+/* Trong videoeditor.css hoặc style inline cho div.preview-container */
+.preview-container {
+    position: relative; /* QUAN TRỌNG NẾU CHƯA CÓ */
+    width: 1000px; /* Hoặc một kích thước cụ thể */
+    height: 500px; /* Hoặc một kích thước cụ thể */
+    overflow: visible; /* Tạm thời để visible để xem canvas có bị tràn ra ngoài không */
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Sẽ không ảnh hưởng đến canvas absolute nữa, nhưng có thể giữ cho các phần tử khác */
+    background-color: #1e1e1e; /* Màu nền cho khu vực chứa canvas */
+
+}
+canvas{
+    left: 40% !important;
+    top: 40% !important;
+
+}
+Sider{
+    margin-left: 10px !important;
+}

@@ -1,55 +1,68 @@
-
-import { Dispatch, SetStateAction } from 'react';
+// src/Hooks/Logic/SubtitleManager.ts
+import { Dispatch, SetStateAction, RefObject } from 'react';
 import { message } from 'antd';
 import axios from "axios";
+import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
+import SockJS from "sockjs-client";
 import type {
     EditorProjectState,
-    SrtSegment,
+    EditorStatus,
     SubtitleEntry,
     Track,
     Clip,
     SubtitleTextAlign
-} from '../../Components/VideoPage/types'; // Điều chỉnh đường dẫn nếu cần
+} from '../../Components/VideoPage/types'; // Adjust path if needed
 import {
     parseTimecodeToSeconds,
     calculateTotalDuration,
     formatTimeToAss,
     convertColorToAss,
     getAssAlignment
-} from '../../Components/VideoPage/utils'; // Điều chỉnh đường dẫn nếu cần
+} from '../../Components/VideoPage/utils'; // Adjust path if needed
 
-
-type ManagerEditorState = 'initial' | 'uploading' | 'transcribing' | 'processing_video' | 'editor';
 type ProjectState = EditorProjectState;
 type DrawFrameFunc = (time: number, projectState: EditorProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }) => void;
 
-// === THAY ĐỔI: Định nghĩa kiểu cho callback tiến trình ===
-type TranscriptionProgressCallback = (progress: number, fileName?: string) => void;
-// === KẾT THÚC THAY ĐỔI ===
+// MODIFIED: Add optional subtitles to the callback
+type TranscriptionProgressCallback = (progress: number, fileName?: string, subtitles?: SubtitleEntry[]) => void;
+
+interface SrtSegment {
+    start: string;
+    end: string;
+    text: string;
+}
+
+export interface TranscriptionOptions {
+    language: string;
+    translate: boolean;
+}
 
 export class SubtitleManager {
-    setProjectState: Dispatch<SetStateAction<ProjectState>>;
-    setEditorState: Dispatch<SetStateAction<ManagerEditorState>>;
+    setProjectState: Dispatch<SetStateAction<ProjectState>>; // Still needed for other methods
+    setEditorState: Dispatch<SetStateAction<EditorStatus>>;
     private setSelectedMenuKey: Dispatch<SetStateAction<string>>;
     private drawFrame: DrawFrameFunc;
     private parseTimecodeToSecondsUtil: (timecode: string) => number;
     private calculateTotalDurationUtil: (tracks: Track[]) => number;
     private transcriptionUrl: string;
-    // === THAY ĐỔI: Thêm thuộc tính cho callback ===
-    private onProgress: TranscriptionProgressCallback;
-    // === KẾT THÚC THAY ĐỔI ===
+    private onProgress: TranscriptionProgressCallback; // Uses modified type
+    private websocketEndpoint: string;
+    private stompClientRef: RefObject<Client | null>;
+    private stompSubscriptionRef: RefObject<StompSubscription | null>;
+
 
     constructor(
         setProjectState: Dispatch<SetStateAction<ProjectState>>,
-        setEditorState: Dispatch<SetStateAction<ManagerEditorState>>,
+        setEditorState: Dispatch<SetStateAction<EditorStatus>>,
         setSelectedMenuKey: Dispatch<SetStateAction<string>>,
         drawFrame: DrawFrameFunc,
         parseTimecodeToSecondsUtil: (timecode: string) => number,
         calculateTotalDurationUtil: (tracks: Track[]) => number,
         transcriptionUrl: string,
-        // === THAY ĐỔI: Thêm tham số callback vào constructor ===
-        onProgressCallback: TranscriptionProgressCallback
-        // === KẾT THÚC THAY ĐỔI ===
+        onProgressCallback: TranscriptionProgressCallback, // Uses modified type
+        websocketEndpoint: string,
+        stompClientRef: RefObject<Client | null>,
+        stompSubscriptionRef: RefObject<StompSubscription | null>
     ) {
         this.setProjectState = setProjectState;
         this.setEditorState = setEditorState;
@@ -58,23 +71,31 @@ export class SubtitleManager {
         this.parseTimecodeToSecondsUtil = parseTimecodeToSecondsUtil;
         this.calculateTotalDurationUtil = calculateTotalDurationUtil;
         this.transcriptionUrl = transcriptionUrl;
-        // === THAY ĐỔI: Lưu callback ===
         this.onProgress = onProgressCallback;
-        // === KẾT THÚC THAY ĐỔI ===
+        this.websocketEndpoint = websocketEndpoint;
+        this.stompClientRef = stompClientRef;
+        this.stompSubscriptionRef = stompSubscriptionRef;
+    }
+
+    private cleanupWebSocket(): void {
+        if (this.stompSubscriptionRef.current) {
+            try {
+                this.stompSubscriptionRef.current.unsubscribe();
+            } catch (e) {
+                console.warn("Error unsubscribing STOMP for transcription:", e);
+            }
+            this.stompSubscriptionRef.current = null;
+        }
+        if (this.stompClientRef.current?.active) {
+            this.stompClientRef.current.deactivate().catch(e => console.warn("Error deactivating STOMP for transcription:", e));
+        }
+        this.stompClientRef.current = null;
     }
 
     public handleUploadSrt = (file: File, _currentProjectState: ProjectState): void => {
         console.log("SubtitleManager: Handling SRT/VTT upload:", file.name);
         message.info(`Processing subtitle file: ${file.name}`);
-
-        this.setProjectState(prev => ({
-            ...prev,
-            uploadProgress: 0,
-            uploadingFile: `Parsing subtitles: ${file.name}`,
-            currentUploadTaskId: `subtitle-parse-${Date.now()}`,
-            uploadTimeRemaining: '...',
-        }));
-        this.setEditorState('uploading'); // Vẫn dùng setEditorState cho upload file srt
+        this.onProgress(0, `Parsing: ${file.name}`);
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -114,20 +135,24 @@ export class SubtitleManager {
                     subtitles = [];
                 }
             }
-            this.setProjectState(prev => ({
-                ...prev, subtitles: subtitles, totalDuration: this.calculateTotalDurationUtil(prev.tracks),
-                selectedClipId: null, uploadProgress: 0, uploadingFile: null, currentUploadTaskId: null, uploadTimeRemaining: '00:00',
-            }));
-            if (subtitles.length > 0) message.success(`Successfully loaded ${subtitles.length} subtitle entries.`);
+
+            // MODIFICATION: Do not set project state here.
+            // Instead, send subtitles back via onProgress.
+            // this.setProjectState(prev => ({
+            //     ...prev, subtitles: subtitles, totalDuration: this.calculateTotalDurationUtil(prev.tracks),
+            //     selectedClipId: null,
+            // }));
+
+            if (subtitles.length > 0) message.success(`Successfully parsed ${subtitles.length} subtitle entries from file.`);
             else message.warning("No valid subtitle entries found in the file.");
 
-            this.setEditorState('editor'); // Trả về editor state sau khi parse xong
+            // MODIFICATION: Pass subtitles array with 100% progress
+            this.onProgress(100, file.name, subtitles);
             this.setSelectedMenuKey('subtitles');
         };
         reader.onerror = (_e) => {
             message.error("Failed to read subtitle file.");
-            this.setProjectState(prev => ({ ...prev, uploadProgress: 0, uploadingFile: null, currentUploadTaskId: null, uploadTimeRemaining: '00:00' }));
-            this.setEditorState('editor');
+            this.onProgress(-1, file.name); // No subtitles on error
             this.setSelectedMenuKey('subtitles');
         };
         reader.readAsText(file);
@@ -136,92 +161,142 @@ export class SubtitleManager {
     public handleStartFromScratch = async (
         selectedClip: Clip | null,
         selectedVideoSecureUrl: string | null,
-        currentTime: number,
-        currentProjectState: ProjectState
+        _currentTime: number,
+        _currentProjectState: ProjectState,
+        transcriptionOptions: TranscriptionOptions
     ): Promise<void> => {
         if (!selectedClip || selectedClip.type !== 'video' || !selectedVideoSecureUrl) {
-            message.info("No video clip selected for transcription. Starting with an empty subtitle entry.");
+            message.error("No video selected or video URL is missing. Cannot start transcription.");
+            this.onProgress(-1, selectedClip?.name || "Selected Video");
             this.setSelectedMenuKey('subtitles');
-            if (currentProjectState.subtitles.length === 0) {
-                this.setProjectState(prev => ({ ...prev, subtitles: [{ id: `subtitle-${Date.now()}`, startTime: currentTime, endTime: currentTime + 3, text: "" }], selectedClipId: null, }));
-            } else {
-                this.setProjectState(prev => ({ ...prev, selectedClipId: null }));
-            }
+            this.setEditorState('editor');
             return;
         }
+
         const accessToken = localStorage.getItem('accessToken');
         if (!accessToken) {
-            message.error('Access token is missing! Cannot start transcription.');
-            this.setSelectedMenuKey('subtitles'); return;
+            message.error('Authentication required. Please log in to use transcription services.');
+            this.onProgress(-1, selectedClip.name || "Selected Video");
+            this.setSelectedMenuKey('subtitles');
+            this.setEditorState('editor');
+            return;
         }
 
         const fileNameForTranscription = selectedClip.name || 'Selected Video';
-        message.info(`Starting transcription for ${fileNameForTranscription}...`);
+        const operationType = transcriptionOptions.translate ? "Translation" : "Transcription";
 
-        // Không set projectState cho uploadProgress, uploadingFile, currentUploadTaskId ở đây nữa
-        // vì chúng ta đã có state riêng isTranscribing, transcriptionProgress, transcribingFileName trong useVideoEditorLogic
+        message.info(`Initiating ${operationType} for: ${fileNameForTranscription}...`);
         this.setSelectedMenuKey('subtitles');
-
-        // === THAY ĐỔI: Gọi callback tiến trình ===
-        this.onProgress(0, fileNameForTranscription); // Khởi tạo
-        console.log("Progress: 0% - Khởi tạo");
-        this.onProgress(5, fileNameForTranscription);  // Chuẩn bị
-        console.log("Progress: 5% - Chuẩn bị gửi yêu cầu đến API");
-        // === KẾT THÚC THAY ĐỔI ===
+        this.setEditorState('transcribing');
 
         try {
-            // === THAY ĐỔI: Gọi callback tiến trình ===
-            this.onProgress(15, fileNameForTranscription); // Đang gửi
-            console.log("Progress: 15% - Đang gửi yêu cầu transcribe");
-            // === KẾT THÚC THAY ĐỔI ===
+            const transcriptionRequestPayload = {
+                url: selectedVideoSecureUrl,
+                language: transcriptionOptions.language,
+                translate: transcriptionOptions.translate,
+            };
 
-            const response = await axios.post<SrtSegment[]>(this.transcriptionUrl, { url: selectedVideoSecureUrl, language: 'en' }, { headers: { Authorization: `Bearer ${accessToken}` }, });
+            const response = await axios.post<string>(this.transcriptionUrl, transcriptionRequestPayload, {
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            });
 
-            // === THAY ĐỔI: Gọi callback tiến trình ===
-            this.onProgress(60, fileNameForTranscription); // Nhận phản hồi
-            console.log("Progress: 60% - Nhận phản hồi thành công");
-            // === KẾT THÚC THAY ĐỔI ===
-
-            console.log("Dữ liệu SRT thô từ API:", response.data);
-
-            const srtSegments = response.data;
-            if (srtSegments && srtSegments.length > 0) {
-                const subtitles: SubtitleEntry[] = srtSegments.map((segment, index) => ({ id: `subtitle-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 5)}`, startTime: this.parseTimecodeToSecondsUtil(segment.start), endTime: this.parseTimecodeToSecondsUtil(segment.end), text: segment.text }));
-
-                // === THAY ĐỔI: Gọi callback tiến trình ===
-                this.onProgress(75, fileNameForTranscription); // Xử lý phụ đề
-                console.log("Progress: 75% - Xử lý phụ đề");
-                // === KẾT THÚC THAY ĐỔI ===
-                console.log("Phụ đề đã xử lý:", subtitles);
-
-                this.setProjectState(prev => ({
-                    ...prev,
-                    subtitles: subtitles,
-                    selectedClipId: null,
-                }));
-                message.success(`Transcription complete! Loaded ${subtitles.length} subtitle entries.`);
-            } else {
-                message.warning("Transcription completed, but no subtitle entries were returned.");
-                this.setProjectState(prev => ({ ...prev }));
+            const taskId = response.data;
+            if (!taskId || typeof taskId !== 'string') {
+                message.error(`${operationType} initiated, but failed to get a valid task ID.`);
+                this.onProgress(-1, fileNameForTranscription);
+                this.setEditorState('editor');
+                return;
             }
-            // === THAY ĐỔI: Gọi callback tiến trình ===
-            this.onProgress(100, fileNameForTranscription); // Hoàn tất
-            console.log("Progress: 100% - Hoàn tất");
-            // === KẾT THÚC THAY ĐỔI ===
+            console.log(`Received taskId for ${operationType}: ${taskId}`);
+            this.cleanupWebSocket();
+
+            const client = new Client({
+                webSocketFactory: () => new SockJS(this.websocketEndpoint),
+                reconnectDelay: 5000,
+                heartbeatIncoming: 4000,
+                heartbeatOutgoing: 4000,
+                debug: (str) => { console.log(`STOMP DEBUG (${operationType} - ${taskId}):`, str); },
+                onConnect: (_frame) => {
+                    console.log(`STOMP connected for ${operationType} task ${taskId}. Subscribing...`);
+                    const topic = `/topic/progress/${taskId}`;
+                    const subscription = client.subscribe(topic, (stompMessage: IMessage) => {
+                        try {
+                            const data = JSON.parse(stompMessage.body);
+                            const serverProgress = typeof data.progress === 'number' ? data.progress : -1;
+
+                            if (data.status === 'complete') {
+                                const srtSegments = data.result as SrtSegment[];
+                                let parsedSubtitles: SubtitleEntry[] = [];
+
+                                if (srtSegments && Array.isArray(srtSegments)) {
+                                    parsedSubtitles = srtSegments.map((segment, index) => ({
+                                        id: `subtitle-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 5)}`,
+                                        startTime: this.parseTimecodeToSecondsUtil(segment.start),
+                                        endTime: this.parseTimecodeToSecondsUtil(segment.end),
+                                        text: segment.text
+                                    }));
+                                }
+
+                                // MODIFICATION: Call onProgress(100, ..., parsedSubtitles)
+                                // Do NOT set project state here for subtitles.
+                                this.onProgress(100, fileNameForTranscription, parsedSubtitles);
+
+                                if (parsedSubtitles.length > 0) {
+                                    message.success(data.message || `${operationType} complete! ${parsedSubtitles.length} entries processed.`);
+                                } else {
+                                    message.warning(data.message || `${operationType} complete, but no subtitles returned or result format is incorrect.`);
+                                }
+
+                                this.setEditorState('editor'); // This is fine here.
+                                this.cleanupWebSocket(); // This is fine here.
+
+                            } else if (data.status === 'error') {
+                                message.error(data.message || `${operationType} error for ${fileNameForTranscription}: ${data.error || 'Unknown server error'}`);
+                                this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+                                this.setEditorState('editor');
+                                this.cleanupWebSocket();
+                            } else if (data.status === 'progress' && serverProgress >= 0) {
+                                console.log(`[Server Progress Update] ${fileNameForTranscription}: ${serverProgress}% (message: ${data.message || ''})`);
+                                // No need to call this.onProgress with intermediate server values if client handles 0-50, then 50-100 logic.
+                            }
+
+                        } catch (e: any) {
+                            message.error(`Error handling server update for ${fileNameForTranscription}: ${e.message}`);
+                            this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+                            this.setEditorState('editor');
+                            this.cleanupWebSocket();
+                        }
+                    });
+                    this.stompSubscriptionRef.current = subscription;
+                    console.log(`Subscribed to ${topic}`);
+                },
+                onStompError: (_frame) => {
+                    message.error(`WebSocket STOMP error during ${operationType} for task ${taskId}.`);
+                    this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+                    this.setEditorState('editor');
+                    this.cleanupWebSocket();
+                },
+                onWebSocketError: (_event) => {
+                    message.error(`WebSocket connection for ${operationType} (task ${taskId}) failed.`);
+                    this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+                    this.setEditorState('editor');
+                    this.cleanupWebSocket();
+                },
+            });
+            this.stompClientRef.current = client;
+            client.activate();
+
         } catch (error: any) {
-            const errorMessage = error.response?.data?.message || error.message || 'Unknown transcription error';
-            message.error(`Transcription failed: ${errorMessage}`);
-            console.error("Lỗi phiên âm:", error);
-            this.setProjectState(prev => ({ ...prev }));
-            // === THAY ĐỔI: Gọi callback với giá trị âm để báo lỗi và reset ===
-            this.onProgress(-1, fileNameForTranscription); // Báo lỗi
-            // === KẾT THÚC THAY ĐỔI ===
-        } finally {
-            // Không cần this.setEditorState('editor') ở đây nữa
-            this.setSelectedMenuKey('subtitles');
+            const errorMessage = error.response?.data?.message || error.response?.data || error.message || `Unknown ${operationType} error`;
+            message.error(`${operationType} request failed: ${errorMessage}`);
+            console.error(`${operationType} initiation error:`, error);
+            this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+            this.setEditorState('editor');
+            this.cleanupWebSocket();
         }
     }
 
+    // ... (rest of the SubtitleManager methods: updateSubtitleFontFamily, etc. remain the same) ...
     public updateSubtitleFontFamily(font: string, currentTime: number, projectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
         this.setProjectState(prev => ({ ...prev, subtitleFontFamily: font }));
         this.drawFrame(currentTime, { ...projectState, subtitleFontFamily: font }, mediaElements);
@@ -267,6 +342,7 @@ export class SubtitleManager {
             canvasDimensions, subtitles, subtitleFontFamily, subtitleFontSize, subtitleColor,
             subtitleBackgroundColor, isSubtitleBold, isSubtitleItalic, isSubtitleUnderlined, subtitleTextAlign
         } = projectState;
+        // If subtitles are empty, still generate the rest of the ASS structure
         const scriptInfo = `[Script Info]\nTitle: ${projectState.projectName || 'Untitled Project'}\nScriptType: v4.00+\nPlayResX: ${canvasDimensions.width}\nPlayResY: ${canvasDimensions.height}\nCollisions: Normal\nWrapStyle: 0\n`;
         const assPrimaryColour = convertColorToAss(subtitleColor);
         const assBackColour = convertColorToAss(subtitleBackgroundColor);
@@ -278,12 +354,14 @@ export class SubtitleManager {
         const defaultStyle = `Style: Default,${subtitleFontFamily},${subtitleFontSize},${assPrimaryColour},${assBackColour},${bold},${italic},${underline},${alignment}`;
         const styles = `[V4+ Styles]\n${stylesFormat}\n${defaultStyle}\n`;
         const eventsFormat = "Format: Start, End, Style, Text";
-        const eventLines = subtitles.map(sub => {
-            const start = formatTimeToAss(sub.startTime);
-            const end = formatTimeToAss(sub.endTime);
-            const text = sub.text.replace(/\n/g, '\\N'); // ASS uses \N for newlines
-            return `Dialogue: ${start},${end},Default,${text}`;
-        }).join('\n');
+        const eventLines = subtitles && subtitles.length > 0
+            ? subtitles.map(sub => {
+                const start = formatTimeToAss(sub.startTime);
+                const end = formatTimeToAss(sub.endTime);
+                const text = sub.text.replace(/\n/g, '\\N');
+                return `Dialogue: ${start},${end},Default,${text}`;
+            }).join('\n')
+            : ""; // Empty string if no subtitles
         const events = `[Events]\n${eventsFormat}\n${eventLines}\n`;
         return `${scriptInfo}\n${styles}\n${events}`;
     }
