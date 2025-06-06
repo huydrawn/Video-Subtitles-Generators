@@ -190,7 +190,7 @@ const AuthenticatePage: React.FC = () => {
 
     // --- OAuth2 Popup Function ---
     const openOAuth2Popup = () => {
-        const oauthUrl = "https://f15f-14-169-36-254.ngrok-free.app/oauth2/authorization/google?redirect_uri=http://localhost:3000/oauth2/redirect";
+        const oauthUrl = "http://localhost:8080/oauth2/authorization/google?redirect_uri=http://localhost:3000/oauth2/redirect";
 
         const width = 500;
         const height = 600;

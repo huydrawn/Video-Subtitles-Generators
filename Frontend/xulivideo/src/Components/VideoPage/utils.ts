@@ -2,14 +2,34 @@
 
 import type {Keyframe, Track} from './types'; // Assuming types are imported
 
-export const formatTime = (seconds: number): string => {
-    if (isNaN(seconds) || seconds < 0) return '00:00.000';
+/**
+ * Formats time in seconds to a string.
+ * If `includeHoursAndPad` is true, format is HH:MM:SS.mmm.
+ * Otherwise, format is MM:SS.mmm (where MM can be > 59).
+ * @param seconds - The time in seconds.
+ * @param includeHoursAndPad - Optional. If true, includes hours and pads all components. Defaults to false.
+ * @returns The formatted time string.
+ */
+export const formatTime = (seconds: number, includeHoursAndPad: boolean = false): string => {
+    if (isNaN(seconds) || seconds < 0) {
+        return includeHoursAndPad ? '00:00:00.000' : '00:00.000';
+    }
+
     const totalMs = Math.floor(seconds * 1000);
     const ms = String(totalMs % 1000).padStart(3, '0');
-    const totalSec = Math.floor(totalMs / 1000);
-    const sec = String(totalSec % 60).padStart(2, '0');
-    const min = String(Math.floor(totalSec / 60)).padStart(2, '0');
-    return `${min}:${sec}.${ms}`;
+    const totalSecValue = Math.floor(totalMs / 1000); // Renamed to avoid conflict with 'seconds' param
+
+    if (includeHoursAndPad) {
+        const hrs = String(Math.floor(totalSecValue / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((totalSecValue % 3600) / 60)).padStart(2, '0');
+        const secs = String(totalSecValue % 60).padStart(2, '0');
+        return `${hrs}:${mins}:${secs}.${ms}`;
+    } else {
+        // Original logic: total minutes, seconds, milliseconds
+        const mins = String(Math.floor(totalSecValue / 60)).padStart(2, '0'); // Total minutes
+        const secs = String(totalSecValue % 60).padStart(2, '0'); // Seconds part of minute
+        return `${mins}:${secs}.${ms}`;
+    }
 };
 
 export const parseTimecodeToSeconds = (timecode: string): number => {

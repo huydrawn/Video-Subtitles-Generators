@@ -1,0 +1,521 @@
+/* videoeditor.css */
+
+/* General styles for the properties panel content area if needed */
+.properties-panel-content {
+    padding: 16px; /* Ensure some padding for the scrollable area */
+    height: 100%;
+    overflow-y: auto;
+    background-color: #ffffff; /* Or your desired panel background color */
+}
+
+/* Style for color preset swatches */
+.color-preset {
+    width: 100%;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+.color-preset:hover {
+    border: 1px solid rgba(0,0,0,0.3);
+}
+
+/* Media Action Buttons (Replace, Crop, Trim) */
+.media-action-button {
+    background-color: #2d2d2d !important; /* Dark gray matching screenshot */
+    color: white !important;
+    border: 1px solid #2d2d2d !important;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Align icon and text to the start */
+    padding-left: 12px !important; /* Add some padding for content */
+    height: 38px !important; /* Consistent height */
+}
+
+.media-action-button .anticon {
+    color: white !important;
+    font-size: 16px !important; /* Adjust if needed */
+}
+
+.media-action-button:hover,
+.media-action-button:focus {
+    background-color: #3f3f3f !important; /* Slightly lighter on hover */
+    color: white !important;
+    border-color: #3f3f3f !important;
+}
+
+.media-action-button > span:not(.anticon) { /* Text next to icon */
+    margin-left: 8px;
+}
+
+/* Styles for the Replace Media Modal */
+.replace-media-modal .ant-modal-content {
+    background-color: #3b3b3b; /* Dark gray for modal content */
+    color: #e0e0e0; /* Light gray text */
+}
+.replace-media-modal .ant-modal-header {
+    background-color: #3b3b3b;
+    border-bottom: 1px solid #555555; /* Border under header */
+}
+.replace-media-modal .ant-modal-title {
+    color: #e0e0e0;
+}
+.replace-media-modal .ant-modal-close {
+    color: #aaaaaa; /* Ensure close button is visible */
+}
+.replace-media-modal .ant-modal-close:hover {
+    color: white;
+}
+
+/* Tabs styling in modal */
+.replace-media-modal .ant-tabs-nav {
+    margin-bottom: 0 !important; /* Remove default margin */
+    padding-left: 24px; /* Align with modal body padding */
+    padding-right: 24px;
+}
+.replace-media-modal .ant-tabs-nav-wrap {
+    border-bottom: 1px solid #555555; /* Line under tabs container */
+}
+.replace-media-modal .ant-tabs-tab {
+    color: #aaaaaa !important;
+    padding: 12px 0 !important; /* Adjust padding for tabs */
+    margin-right: 32px !important; /* Space between tabs */
+    font-size: 14px !important;
+}
+.replace-media-modal .ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: white !important;
+}
+.replace-media-modal .ant-tabs-ink-bar {
+    background: white !important;
+    height: 2px !important;
+}
+
+/* Custom class for modal body content for consistent padding */
+.replace-media-modal-body {
+    padding: 16px 24px 24px 24px;
+}
+
+.replace-media-modal .upload-button-container {
+    margin-bottom: 16px;
+}
+
+.replace-media-modal .upload-button-container .ant-btn {
+    background-color: #4a4a4a !important; /* Slightly lighter than content bg */
+    border-color: #555555 !important;
+    color: white !important;
+    width: 100%;
+}
+.replace-media-modal .upload-button-container .ant-btn:hover {
+    background-color: #5a5a5a !important;
+    border-color: #666666 !important;
+}
+
+/* Search Input in modal */
+.replace-media-modal .ant-input-search .ant-input {
+    background-color: #2d2d2d !important;
+    border-color: #555555 !important;
+    color: #e0e0e0 !important;
+}
+.replace-media-modal .ant-input-search .ant-input::placeholder {
+    color: #888888;
+}
+.replace-media-modal .ant-input-search .ant-input-group-addon .ant-btn { /* Search button */
+    background-color: #555555 !important;
+    border-color: #555555 !important;
+    color: white !important;
+}
+.replace-media-modal .ant-input-search .ant-input-group-addon .ant-btn:hover {
+    background-color: #666666 !important;
+    border-color: #666666 !important;
+}
+.replace-media-modal .ant-input-search .anticon-search {
+    color: #e0e0e0 !important;
+}
+
+/* Media Grid styles */
+.media-grid-container {
+    max-height: 350px; /* Adjust as needed */
+    overflow-y: auto;
+    /* Add some padding to prevent scrollbar from overlapping content if needed */
+    /* padding-right: 4px; */
+}
+
+.replace-media-modal .media-item-card {
+    background-color: #3b3b3b !important; /* Same as modal body or slightly different */
+    border: 1px solid #4a4a4a !important; /* Subtle border for cards */
+    color: #e0e0e0 !important;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.replace-media-modal .media-item-card:hover {
+    border-color: #666666 !important;
+}
+
+.replace-media-modal .media-item-card .ant-card-body {
+    padding: 8px !important;
+}
+
+.replace-media-modal .media-thumbnail {
+    background-color: #2d2d2d; /* Darker placeholder for image area */
+    width: 100%;
+    padding-top: 56.25%; /* 16:9 Aspect Ratio for thumbnails */
+    position: relative;
+    border-radius: 3px; /* Slightly rounded corners for thumbnail */
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Ensure image fits */
+}
+.replace-media-modal .media-thumbnail img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Cover ensures the image fills the space */
+}
+.replace-media-modal .media-thumbnail .anticon-file-image { /* Placeholder icon */
+    font-size: 32px;
+    color: #777777;
+    position: absolute; /* Center it */
+}
+
+.replace-media-modal .media-duration {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    background-color: rgba(0,0,0,0.7);
+    color: white;
+    font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 2px;
+    line-height: 1;
+}
+.replace-media-modal .media-title {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    color: #e0e0e0; /* Ensure title text color */
+}
+.replace-media-modal .media-title .anticon { /* Icons before title text */
+    margin-right: 6px;
+    font-size: 14px; /* Make icons slightly larger */
+    color: #b0b0b0; /* Slightly lighter gray for type icons */
+}
+.replace-media-modal .media-star-icon {
+    color: #ffd700; /* Gold color for star */
+    margin-left: auto; /* Pushes star to the right end of the flex container */
+    font-size: 14px;
+}
+
+/* Scrollbar styling for dark theme (optional, browser-dependent) */
+.media-grid-container::-webkit-scrollbar {
+    width: 8px;
+}
+.media-grid-container::-webkit-scrollbar-track {
+    background: #2d2d2d;
+    border-radius: 4px;
+}
+.media-grid-container::-webkit-scrollbar-thumb {
+    background: #555555;
+    border-radius: 4px;
+}
+.media-grid-container::-webkit-scrollbar-thumb:hover {
+    background: #666666;
+}
+/* Styles for the Trim Video Modal */
+.trim-video-modal .ant-modal-content {
+    background-color: #212121; /* Dark background for the modal */
+    color: white;
+    border-radius: 8px; /* Slightly rounded corners for the modal */
+    overflow: hidden; /* To ensure child elements respect border-radius */
+}
+
+.trim-video-modal .ant-modal-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ensure body takes full height given by bodyStyle */
+}
+
+.trim-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Align items to the top */
+    padding: 16px 24px;
+    background-color: #2d2d2d; /* Slightly different header background */
+    border-bottom: 1px solid #424242;
+}
+
+.trim-modal-header .ant-typography {
+    color: white !important;
+}
+.trim-modal-header .ant-typography-secondary {
+    color: #a0a0a0 !important;
+}
+
+.trim-modal-close-btn.ant-btn-text {
+    color: #a0a0a0;
+    font-size: 16px;
+}
+.trim-modal-close-btn.ant-btn-text:hover {
+    color: white;
+    background-color: transparent;
+}
+
+.trim-modal-video-preview {
+    flex-grow: 1; /* Takes up available vertical space */
+    background-color: #181818; /* Very dark for video area */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow: hidden; /* If video is larger than container */
+}
+
+.trim-modal-timeline-controls {
+    padding: 12px 24px;
+    background-color: #2d2d2d;
+    border-top: 1px solid #424242;
+    border-bottom: 1px solid #424242;
+}
+
+.trim-timeline-top-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    color: #a0a0a0;
+}
+
+.trim-play-btn.ant-btn-text .anticon {
+    color: #e0e0e0;
+}
+.trim-play-btn.ant-btn-text:hover .anticon {
+    color: white;
+}
+
+
+.trim-timeline-time-markers {
+    flex-grow: 1;
+    display: flex;
+    justify-content: space-around; /* Distribute markers */
+    padding: 0 20px; /* Some padding around markers */
+    position: relative;
+    height: 20px; /* To align with the ruler track conceptually */
+    align-items: center; /* Vertically center text */
+}
+.trim-timeline-time-markers .time-marker {
+    color: #757575;
+    font-size: 11px;
+}
+
+.trim-zoom-controls {
+    display: flex;
+    align-items: center;
+    margin-right: 16px;
+}
+.trim-zoom-controls .ant-btn-text {
+    color: #a0a0a0;
+}
+.trim-zoom-controls .ant-btn-text:hover {
+    color: white;
+}
+.trim-zoom-controls .ant-slider {
+    margin: 0 8px !important; /* Override AntD margin */
+}
+.trim-zoom-controls .ant-slider .ant-slider-track {
+    background-color: #5a5a5a !important;
+}
+.trim-zoom-controls .ant-slider .ant-slider-handle {
+    border-color: #757575 !important;
+    background-color: #e0e0e0 !important;
+}
+.trim-zoom-controls .ant-slider .ant-slider-rail {
+    background-color: #424242 !important;
+}
+
+.fit-to-screen-btn {
+    background-color: #3f3f3f !important;
+    color: #e0e0e0 !important;
+    border: 1px solid #555555 !important;
+    font-size: 12px !important;
+    padding: 4px 10px !important;
+    height: auto !important;
+}
+.fit-to-screen-btn:hover {
+    background-color: #4a4a4a !important;
+    color: white !important;
+}
+
+
+.trim-timeline-visual-container {
+    position: relative;
+    height: 60px; /* Height for the waveform/frames area */
+    margin-top: 8px; /* Space above visual timeline */
+}
+
+.trim-timeline-ruler-track {
+    position: absolute;
+    top: -10px; /* Position above the main timeline bar */
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #555555; /* Thin gray line */
+    z-index: 0;
+}
+
+
+.trim-playhead {
+    position: absolute;
+    top: -8px; /* Align with the top of the visual timeline bar */
+    height: calc(100% + 12px); /* Extend slightly above and below */
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none; /* Don't interfere with dragging handles */
+}
+.trim-playhead-line {
+    width: 2px;
+    height: 100%;
+    background-color: white;
+}
+.trim-playhead-thumb {
+    width: 10px;
+    height: 10px;
+    background-color: white;
+    border-radius: 50%;
+    border: 2px solid #2d2d2d; /* Match background to create an outline */
+    margin-top: -5px; /* Center on the line */
+    position: relative; /* Ensure it's above the line visually if overlap */
+}
+
+
+.trim-timeline-bar {
+    height: 100%;
+    background-color: #383838; /* Darker gray for the timeline track */
+    border-radius: 3px;
+    position: relative; /* For absolute positioning of handles and selection */
+    overflow: hidden; /* To clip waveform/frames if they exceed */
+    display: flex; /* For waveform placeholder items */
+    align-items: center; /* Vertically center waveform if shorter */
+}
+
+.trim-waveform-placeholder {
+    width: 100%;
+    height: 80%; /* Example height for waveform */
+    display: flex;
+    align-items: flex-end; /* Align "bars" to bottom */
+    padding: 0 5px; /* Some padding inside */
+    overflow: hidden;
+}
+.trim-frame-item { /* Simulate frames or waveform bars */
+    flex-grow: 1;
+    height: 100%;
+    background-color: #4CAF50; /* Greenish color like waveform */
+    margin-right: 1px; /* Small gap between bars */
+    opacity: 0.7;
+}
+/* Make some bars different heights for visual interest */
+.trim-frame-item:nth-child(3n) { height: 60%; }
+.trim-frame-item:nth-child(4n) { height: 40%; }
+.trim-frame-item:nth-child(5n) { height: 90%; }
+
+
+.trim-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 10px; /* Width of the draggable handle */
+    background-color: #f0f0f0; /* Light gray for handles */
+    border: 1px solid #ababab;
+    cursor: ew-resize;
+    z-index: 5; /* Above selection, below playhead */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.trim-handle::before { /* Small grabber lines on handle */
+    content: '';
+    display: block;
+    width: 2px;
+    height: 20px;
+    background-color: #757575;
+    border-radius: 1px;
+}
+
+.trim-handle-start {
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+    left: 10%; /* Example */
+}
+.trim-handle-end {
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    left: 70%; /* Example */
+}
+
+.trim-selection {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(76, 175, 80, 0.3); /* Semi-transparent green for selected area */
+    border-top: 2px solid #4CAF50;
+    border-bottom: 2px solid #4CAF50;
+    z-index: 1; /* Below handles */
+    pointer-events: none; /* Don't interfere with underlying timeline interaction */
+}
+
+
+.trim-modal-footer-controls {
+    padding: 16px 24px;
+    background-color: #2d2d2d;
+    /* border-top: 1px solid #424242; */ /* Removed as it's the last element */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; /* Align items to bottom of container */
+}
+
+.trim-time-label {
+    color: #a0a0a0;
+    font-size: 12px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.trim-time-input.ant-input {
+    background-color: #3f3f3f !important;
+    color: white !important;
+    border: 1px solid #555555 !important;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 6px 8px !important;
+    width: 130px; /* Fixed width for time input */
+}
+
+.trim-set-time-btn.ant-btn-link {
+    color: #75bfff !important; /* Light blue for link buttons */
+    padding: 0 !important;
+    font-size: 11px !important;
+    margin-top: 4px;
+}
+.trim-set-time-btn.ant-btn-link:hover {
+    color: #90caf9 !important;
+}
+
+.trim-action-btn.ant-btn-primary {
+    background-color: #007bff !important;
+    border-color: #007bff !important;
+    font-size: 14px !important;
+    padding: 8px 24px !important;
+    height: auto !important;
+}
+.trim-action-btn.ant-btn-primary:hover {
+    background-color: #0069d9 !important;
+    border-color: #0062cc !important;
+}
