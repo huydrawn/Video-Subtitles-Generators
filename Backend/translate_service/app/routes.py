@@ -10,6 +10,7 @@ def transcribe():
     lang = data.get("language", "en")
     translate = data.get("translate")
 
+
     if not url:
         return jsonify({"error": "Missing 'url'"}), 400
 
