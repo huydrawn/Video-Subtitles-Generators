@@ -61,4 +61,9 @@ public class User {
 	@JoinColumn(name = "workspace_id", unique = true) // Khóa ngoại trỏ đến Workspace
 	private Workspace workspace;
 
+	@Builder.Default
+	@Enumerated(EnumType.STRING)
+	@Column(name = "account_tier", nullable = false, length = 20)
+	private AccountTier accountTier = AccountTier.FREE;
+
 }
