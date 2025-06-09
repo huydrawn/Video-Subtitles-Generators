@@ -11,6 +11,7 @@ def transcribe_audio(video_url, language, translate):
             wav_path = temp_audio.name
             download_audio(video_url, wav_path)
             task_type = "translate" if translate else "transcribe"
+            print(task_type)
             result = model.transcribe(wav_path, language=language, task=task_type)
 
             srt_segments = []
