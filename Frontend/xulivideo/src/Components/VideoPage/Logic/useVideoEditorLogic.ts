@@ -17,28 +17,28 @@ import { fetchFile } from '@ffmpeg/util';
 import type {
     Clip, Track, MediaAsset, EditorProjectState, Keyframe, ThumbnailInfo,
     SubtitleEntry, ClipType, EditorStatus
-} from './types'; // ENSURE THIS PATH IS CORRECT
+} from '../types'; // ENSURE THIS PATH IS CORRECT
 import {
     THUMBNAIL_INTERVAL, DEFAULT_CLIP_DURATION, PLAYBACK_RATES, MIN_CLIP_DURATION,
     PREVIEW_ZOOM_LEVELS, PREVIEW_ZOOM_FIT_MODE, PREVIEW_ZOOM_FILL_MODE,
     DEFAULT_SUBTITLE_FONT_SIZE, DEFAULT_SUBTITLE_TEXT_ALIGN, SUBTITLE_FILL_COLOR, SUBTITLE_BACKGROUND_COLOR
-} from '../../Hooks/constants'; // ENSURE THIS PATH IS CORRECT
+} from '../../../Hooks/constants'; // ENSURE THIS PATH IS CORRECT
 import {
     formatTime, parseTimecodeToSeconds, interpolateValue, getWrappedLines,
     calculateTotalDuration
-} from './utils'; // ENSURE THIS PATH IS CORRECT
+} from '../utils'; // ENSURE THIS PATH IS CORRECT
 
 // Import Controllers
-import { CanvasRenderer } from '../../Hooks/Logic/CanvasRenderer';
-import { PlaybackController } from '../../Hooks/Logic/PlaybackController';
-import { MediaElementManager } from '../../Hooks/Logic/MediaElementManager';
-import { ClipManager } from '../../Hooks/Logic/ClipManager';
-import { UploadManager } from '../../Hooks/Logic/UploadManager';
+import { CanvasRenderer } from '../../../Hooks/Logic/CanvasRenderer';
+import { PlaybackController } from '../../../Hooks/Logic/PlaybackController';
+import { MediaElementManager } from '../../../Hooks/Logic/MediaElementManager';
+import { ClipManager } from '../../../Hooks/Logic/ClipManager';
+import { UploadManager } from '../../../Hooks/Logic/UploadManager';
 // CORRECTED: Import TranscriptionOptions from SubtitleManager
-import { SubtitleManager, TranscriptionOptions } from '../../Hooks/Logic/SubtitleManager';
-import { PreviewMoveableController } from '../../Hooks/Logic/PreviewMoveableController';
-import { TimelineMoveableController } from '../../Hooks/Logic/TimelineMoveableController';
-import { PreviewZoomController } from '../../Hooks/Logic/PreviewZoomController';
+import { SubtitleManager, TranscriptionOptions } from '../../../Hooks/Logic/SubtitleManager';
+import { PreviewMoveableController } from '../../../Hooks/Logic/PreviewMoveableController';
+import { TimelineMoveableController } from '../../../Hooks/Logic/TimelineMoveableController';
+import { PreviewZoomController } from '../../../Hooks/Logic/PreviewZoomController';
 
 type GenerateThumbnailsFunc = (clipId: string, videoElement: HTMLVideoElement) => Promise<ThumbnailInfo[]>;
 type MediaElementsRefValue = { [key: string]: HTMLVideoElement | HTMLImageElement };
@@ -975,6 +975,8 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
         handleMergeSubtitles,
         // --- Export new items for desaturation ---
         isDesaturating,
+        setIsDesaturating,
+        setDesaturationProgress,
         desaturationProgress,
         handleDesaturateVideoSegment,
         // --- Export new items for audio extraction ---

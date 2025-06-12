@@ -159,3 +159,135 @@ export const getAssAlignment = (textAlign: 'left' | 'center' | 'right'): number 
         default: return 2;       // Default to bottom-center
     }
 };
+export const getKapwingTimelineLabelInterval = (
+    totalDurationSeconds: number,
+    currentPxPerSec: number // Current pixels per second based on zoom
+): number => {
+    if (totalDurationSeconds < 0) totalDurationSeconds = 0; // Handle negative duration gracefully
+
+    let kapwingIntervals: number[]; // Allowed intervals for this duration, smallest to largest
+    let kapwingDefaultInterval: number; // The "Mặc định" or "Phổ biến" interval from Kapwing's logic
+
+    // Determine Kapwing's suggested range and default based on total video duration
+    if (totalDurationSeconds < 30) {
+        // Kapwing: < 30 giây: 1–2 giây. Mặc định thường là 2s. Zoom cao có thể 1s.
+        kapwingIntervals = [1, 2];
+        kapwingDefaultInterval = 2;
+    } else if (totalDurationSeconds <= 60) { // 30 giây – 1 phút
+        // Kapwing: 2–5 giây. Tùy zoom, phổ biến là 5s.
+        kapwingIntervals = [2, 3, 4, 5];
+        kapwingDefaultInterval = 5;
+    } else if (totalDurationSeconds <= 180) { // 1 – 3 phút (e.g., 180s)
+        // Kapwing: 10 – 20 giây. Mặc định thường là 18s. (Example: 143s video -> 18s mốc)
+        kapwingIntervals = [10, 12, 15, 18, 20];
+        kapwingDefaultInterval = 18;
+    } else { // > 3 phút
+        // Kapwing: 30 giây – 2 phút (120s). Mốc càng thưa nếu không zoom. (Example: 6 min video -> 1 min mốc)
+        kapwingIntervals = [30, 45, 60, 90, 120];
+
+        const targetMarkersForDefault = (6 + 12) / 2; // Aim for ~9 markers
+        let closestToTargetDefault = kapwingIntervals[0];
+        if (totalDurationSeconds > 0) { // Avoid division by zero if duration is 0
+            let minDiffForDefault = Infinity;
+            for (const iv of kapwingIntervals) {
+                if (iv <= 0) continue;
+                const currentMarkers = totalDurationSeconds / iv;
+                const diff = Math.abs(currentMarkers - targetMarkersForDefault);
+                if (diff < minDiffForDefault) {
+                    minDiffForDefault = diff;
+                    closestToTargetDefault = iv;
+                } else if (diff === minDiffForDefault && iv < closestToTargetDefault) {
+                    closestToTargetDefault = iv;
+                }
+            }
+        }
+        kapwingDefaultInterval = closestToTargetDefault;
+    }
+
+    // --- Adjust interval choice based on zoom (currentPxPerSec) ---
+    let targetMinTotalMarkers: number, targetMaxTotalMarkers: number;
+    if (totalDurationSeconds < 30) { targetMinTotalMarkers = 10; targetMaxTotalMarkers = 30; }
+    else if (totalDurationSeconds <= 60) { targetMinTotalMarkers = 8; targetMaxTotalMarkers = 20; }
+    else if (totalDurationSeconds <= 180) { targetMinTotalMarkers = 7; targetMaxTotalMarkers = 18; }
+    else { targetMinTotalMarkers = 5; targetMaxTotalMarkers = 12; }
+
+    let chosenInterval = kapwingDefaultInterval;
+    const idealPxPerSecondForDefault = 50; // Reference "normal" zoom level (e.g., 1s = 50px)
+    let idealIntervalIndex = kapwingIntervals.indexOf(kapwingDefaultInterval);
+    if (idealIntervalIndex === -1) idealIntervalIndex = Math.floor(kapwingIntervals.length / 2);
+
+    if (currentPxPerSec > idealPxPerSecondForDefault * 1.8 && idealIntervalIndex > 0) {
+        idealIntervalIndex--;
+        if (totalDurationSeconds < 30 && currentPxPerSec > 100 && kapwingIntervals[0] === 1) {
+            idealIntervalIndex = 0; // Kapwing: <30s, zoom cao có thể 1s.
+        }
+    } else if (currentPxPerSec < idealPxPerSecondForDefault * 0.6 && idealIntervalIndex < kapwingIntervals.length - 1) {
+        idealIntervalIndex++;
+    }
+
+    chosenInterval = kapwingIntervals[idealIntervalIndex] || kapwingDefaultInterval;
+
+    // Refine choice to ensure the total number of markers is within Kapwing's guidelines for the *entire video*
+    if (totalDurationSeconds > 0 && chosenInterval > 0) { // Avoid division by zero
+        const currentTotalMarkersWithZoomChoice = totalDurationSeconds / chosenInterval;
+
+        if (currentTotalMarkersWithZoomChoice < targetMinTotalMarkers && chosenInterval !== kapwingIntervals[0]) {
+            for (let i = idealIntervalIndex - 1; i >= 0; i--) {
+                const smallerInterval = kapwingIntervals[i];
+                if (smallerInterval <= 0) continue;
+                if (totalDurationSeconds / smallerInterval >= targetMinTotalMarkers || i === 0) {
+                    if (totalDurationSeconds / smallerInterval <= targetMaxTotalMarkers || totalDurationSeconds / smallerInterval < targetMinTotalMarkers) {
+                        chosenInterval = smallerInterval;
+                        break;
+                    }
+                }
+            }
+        } else if (currentTotalMarkersWithZoomChoice > targetMaxTotalMarkers && chosenInterval !== kapwingIntervals[kapwingIntervals.length -1]) {
+            for (let i = idealIntervalIndex + 1; i < kapwingIntervals.length; i++) {
+                const largerInterval = kapwingIntervals[i];
+                if (largerInterval <= 0) continue;
+                if (totalDurationSeconds / largerInterval <= targetMaxTotalMarkers || i === kapwingIntervals.length -1 ) {
+                    if (totalDurationSeconds / largerInterval >= targetMinTotalMarkers || totalDurationSeconds / largerInterval > targetMaxTotalMarkers) {
+                        chosenInterval = largerInterval;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (totalDurationSeconds === 0) return 1; // Default for zero duration
+    if (chosenInterval <= 0) chosenInterval = kapwingIntervals.find(iv => iv > 0) || 1; // Ensure positive
+
+    // Ensure interval is not excessively large for very short videos if auto-calculation leads to it
+    if (totalDurationSeconds > 0 && chosenInterval > totalDurationSeconds && kapwingIntervals.length > 0) {
+        let feasibleInterval = [...kapwingIntervals].reverse().find(iv => iv > 0 && iv <= totalDurationSeconds);
+        chosenInterval = feasibleInterval || Math.max(1, totalDurationSeconds); // Pick largest valid or duration itself (min 1s)
+    }
+    // If total duration is small, e.g., 0.5s, and smallest interval is 1s, use totalDuration.
+    if (totalDurationSeconds > 0 && totalDurationSeconds < chosenInterval) {
+        chosenInterval = totalDurationSeconds;
+    }
+
+    return Math.max(0.1, chosenInterval); // Ensure a minimum practical interval
+};
+
+export const formatRulerTimeForDynamicLabels = (totalSeconds: number): string => {
+    if (totalSeconds < 0) totalSeconds = 0; // Ensure non-negative
+    const ss = Math.floor(totalSeconds % 60);
+    const mm = Math.floor(totalSeconds / 60) % 60;
+    const hh = Math.floor(totalSeconds / 3600);
+    const pad = (num: number) => (num < 10 ? '0' : '') + num;
+
+    if (hh > 0) {
+        return `${hh}:${pad(mm)}:${pad(ss)}`; // e.g., 1:00:18
+    }
+    if (mm > 0) {
+        return `${mm}:${pad(ss)}`; // e.g., 1:12, 1:30
+    }
+    if (totalSeconds === 0) { // Specifically for the "0" mark
+        return "0";
+    }
+    // For seconds only, e.g., :18, :36, :54
+    return `:${pad(ss)}`;
+};

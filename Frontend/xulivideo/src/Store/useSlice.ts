@@ -1,7 +1,7 @@
 // src/features/user/userSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import apiService from '../Services/apiService'; // Adjust path if necessary
-import { UserDTO, Project, Workspace } from '../Components/VideoPage'; // Adjust path and import necessary types
+import { UserDTO, Project, Workspace } from '../Components/HomePage'; // Adjust path and import necessary types
 // Swal and NavigateFunction are not directly used in the slice but might be in components calling these thunks
 // import Swal from 'sweetalert2';
 // import { NavigateFunction } from 'react-router-dom';
