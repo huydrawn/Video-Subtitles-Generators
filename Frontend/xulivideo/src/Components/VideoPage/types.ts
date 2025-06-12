@@ -9,7 +9,7 @@ export interface Keyframe {
     value: number | { x: number; y: number } | string | any;
 }
 export type SubtitleTextAlign = 'left' | 'center' | 'right';
-export type ClipType = 'video' | 'image' | 'text';
+export type ClipType = 'video' | 'image' | 'text' | 'audio'; // Add 'audio'
 
 export interface Clip {
     id: string;
@@ -117,7 +117,7 @@ export interface EditorProjectState {
 // This will also need to reflect that setEditorState uses EditorStatus
 // And editorState itself is of type EditorStatus
 export type VideoEditorLogic = Omit<
-    ReturnType<typeof import('./useVideoEditorLogic').useVideoEditorLogic>,
+    ReturnType<typeof import('./Logic/useVideoEditorLogic').useVideoEditorLogic>,
     'editorState' | 'setEditorState'
 > & {
     editorState: EditorStatus;

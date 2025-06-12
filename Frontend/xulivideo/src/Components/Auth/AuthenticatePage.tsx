@@ -130,7 +130,9 @@ const AuthenticatePage: React.FC = () => {
 
             if (response.status === 200 && response.data?.accessToken) {
                 const accessToken = response.data.accessToken;
+                const userId = response.data.userId;
                 localStorage.setItem('accessToken', accessToken);
+                localStorage.setItem('userId', userId);
                 console.log("Access token stored in localStorage:", accessToken);
 
                 Swal.fire({

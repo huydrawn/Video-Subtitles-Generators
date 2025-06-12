@@ -7,14 +7,15 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from './Components/Auth/auth';
 
 // Import components directly (as they were in your original second App.tsx)
-import VideoPage from './Components/VideoPage/index'; // Using VideoPage as consistent name
+import VideoPage from './Components/HomePage'; // Using VideoPage as consistent name
 import UploadPage from './Components/VideoPage/upload';
 import SummaryPage from './Components/VideoPage/summary';
 import VideoEditorPage from './Components/VideoPage/VideoEditor';
 import AuthenticatePage from './Components/Auth/AuthenticatePage';
-import HomePage from './Components/VideoPage/home'; // This is your Kapwing-like page
-import NewHomePage from './Components/VideoPage/index'; // This is your Kapwing-like page
+import HomePage from './Components/HomePage/home'; // This is your Kapwing-like page
+import NewHomePage from './Components/HomePage'; // This is your Kapwing-like page
 import OAuth2Page from './Components/Auth/OAuth2RedirectPage';
+import PaymentSuccessPage from './Components/HomePage/PaymentSuccessPage'
 
 function App() {
     return (
@@ -52,7 +53,10 @@ function App() {
                     path="/summary"
                     element={<ProtectedRoute component={SummaryPage} />}
                 />
-
+                <Route
+                    path="/paymentsuccess"
+                    element={<ProtectedRoute component={PaymentSuccessPage} />}
+                />
                 {/* /videoeditor route */}
                 <Route
                     path="/videoeditor"
