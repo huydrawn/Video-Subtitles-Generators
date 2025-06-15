@@ -2,22 +2,11 @@ package com.example.video.editor.model;
 
 import java.time.LocalDateTime;
 
+import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -65,5 +54,17 @@ public class User {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "account_tier", nullable = false, length = 20)
 	private AccountTier accountTier = AccountTier.FREE;
+
+	@ManyToOne(fetch = FetchType.EAGER) // <--- Đảm bảo FetchType.EAGER là tường minh (mặc định là EAGER cho ManyToOne)
+	@JoinColumn(name = "role_id", nullable = false) // <--- Đảm bảo là nullable = false sau khi đã cập nhật DB
+	private Role role;
+
+	@Column(name = "failed_login_attempts", nullable = false)
+	private int failedLoginAttempts = 0; // Default to 0
+
+	@Column(name = "last_failed_login_time")
+	private LocalDateTime lastFailedLoginTime; // To store the timestamp of the last failed login
+
+
 
 }

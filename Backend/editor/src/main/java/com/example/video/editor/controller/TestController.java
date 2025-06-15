@@ -15,12 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.cloudinary.Cloudinary;
@@ -48,12 +43,19 @@ public class TestController {
 		return ResponseEntity.ok("ok");
 	}
 
-	@PostMapping
-	public ResponseEntity<?> addSubtitle(@RequestParam("file") MultipartFile subtitleFile) throws IOException {
-		byte[] fileSub = subtitleFile.getBytes();
-		var taskId = taskProcessingService.startProgressTask(saveSubtitlesService, fileSub);
-		return ResponseEntity.ok(Collections.singletonMap("url", taskId));
-	}
+//	@PostMapping
+//	public ResponseEntity<?> addSubtitle(@RequestParam("file") MultipartFile subtitleFile) throws IOException {
+//		byte[] fileSub = subtitleFile.getBytes();
+//		var taskId = taskProcessingService.startProgressTask(saveSubtitlesService, fileSub);
+//		return ResponseEntity.ok(Collections.singletonMap("url", taskId));
+//	}
+@PostMapping("/{publicProjectId}/subtitles")
+public ResponseEntity<?> addSubtitle(@RequestParam("file") MultipartFile subtitleFile
+		, @PathVariable String publicProjectId) throws IOException {
+	byte[] fileSub = subtitleFile.getBytes();
+	var taskId = taskProcessingService.startProgressTask(saveSubtitlesService, fileSub, publicProjectId);
+	return ResponseEntity.ok(Collections.singletonMap("url", taskId)); // <--- Vấn đề nằm ở đây
+}
 
 	@PostMapping("/ok")
 	public ResponseEntity<String> hi(@Valid @RequestBody TestDto dto) throws IOException {
