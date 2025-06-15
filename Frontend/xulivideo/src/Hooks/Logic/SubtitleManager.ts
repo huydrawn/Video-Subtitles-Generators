@@ -1,4 +1,5 @@
 // src/Hooks/Logic/SubtitleManager.ts
+
 import { Dispatch, SetStateAction, RefObject } from 'react';
 import { message } from 'antd';
 import axios from "axios";
@@ -18,12 +19,12 @@ import {
     formatTimeToAss,
     convertColorToAss,
     getAssAlignment
-} from '../../Components/VideoPage/utils'; // Adjust path if needed
+} from '../../Components/VideoPage/utils'; // <-- Đảm bảo đường dẫn này đúng và chứa các hàm trên
+
 
 type ProjectState = EditorProjectState;
 type DrawFrameFunc = (time: number, projectState: EditorProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }) => void;
 
-// MODIFIED: Add optional subtitles to the callback
 type TranscriptionProgressCallback = (progress: number, fileName?: string, subtitles?: SubtitleEntry[]) => void;
 
 interface SrtSegment {
@@ -38,18 +39,17 @@ export interface TranscriptionOptions {
 }
 
 export class SubtitleManager {
-    setProjectState: Dispatch<SetStateAction<ProjectState>>; // Still needed for other methods
+    setProjectState: Dispatch<SetStateAction<ProjectState>>;
     setEditorState: Dispatch<SetStateAction<EditorStatus>>;
     private setSelectedMenuKey: Dispatch<SetStateAction<string>>;
     private drawFrame: DrawFrameFunc;
     private parseTimecodeToSecondsUtil: (timecode: string) => number;
     private calculateTotalDurationUtil: (tracks: Track[]) => number;
     private transcriptionUrl: string;
-    private onProgress: TranscriptionProgressCallback; // Uses modified type
+    private onProgress: TranscriptionProgressCallback;
     private websocketEndpoint: string;
     private stompClientRef: RefObject<Client | null>;
     private stompSubscriptionRef: RefObject<StompSubscription | null>;
-
 
     constructor(
         setProjectState: Dispatch<SetStateAction<ProjectState>>,
@@ -59,7 +59,7 @@ export class SubtitleManager {
         parseTimecodeToSecondsUtil: (timecode: string) => number,
         calculateTotalDurationUtil: (tracks: Track[]) => number,
         transcriptionUrl: string,
-        onProgressCallback: TranscriptionProgressCallback, // Uses modified type
+        onProgressCallback: TranscriptionProgressCallback,
         websocketEndpoint: string,
         stompClientRef: RefObject<Client | null>,
         stompSubscriptionRef: RefObject<StompSubscription | null>
@@ -136,23 +136,15 @@ export class SubtitleManager {
                 }
             }
 
-            // MODIFICATION: Do not set project state here.
-            // Instead, send subtitles back via onProgress.
-            // this.setProjectState(prev => ({
-            //     ...prev, subtitles: subtitles, totalDuration: this.calculateTotalDurationUtil(prev.tracks),
-            //     selectedClipId: null,
-            // }));
-
             if (subtitles.length > 0) message.success(`Successfully parsed ${subtitles.length} subtitle entries from file.`);
             else message.warning("No valid subtitle entries found in the file.");
 
-            // MODIFICATION: Pass subtitles array with 100% progress
             this.onProgress(100, file.name, subtitles);
             this.setSelectedMenuKey('subtitles');
         };
         reader.onerror = (_e) => {
             message.error("Failed to read subtitle file.");
-            this.onProgress(-1, file.name); // No subtitles on error
+            this.onProgress(-1, file.name);
             this.setSelectedMenuKey('subtitles');
         };
         reader.readAsText(file);
@@ -237,8 +229,6 @@ export class SubtitleManager {
                                     }));
                                 }
 
-                                // MODIFICATION: Call onProgress(100, ..., parsedSubtitles)
-                                // Do NOT set project state here for subtitles.
                                 this.onProgress(100, fileNameForTranscription, parsedSubtitles);
 
                                 if (parsedSubtitles.length > 0) {
@@ -247,22 +237,23 @@ export class SubtitleManager {
                                     message.warning(data.message || `${operationType} complete, but no subtitles returned or result format is incorrect.`);
                                 }
 
-                                this.setEditorState('editor'); // This is fine here.
-                                this.cleanupWebSocket(); // This is fine here.
+                                this.setEditorState('editor');
+                                this.cleanupWebSocket();
 
                             } else if (data.status === 'error') {
                                 message.error(data.message || `${operationType} error for ${fileNameForTranscription}: ${data.error || 'Unknown server error'}`);
-                                this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+                                this.onProgress(-1, fileNameForTranscription);
                                 this.setEditorState('editor');
                                 this.cleanupWebSocket();
                             } else if (data.status === 'progress' && serverProgress >= 0) {
                                 console.log(`[Server Progress Update] ${fileNameForTranscription}: ${serverProgress}% (message: ${data.message || ''})`);
-                                // No need to call this.onProgress with intermediate server values if client handles 0-50, then 50-100 logic.
+                                // Call onProgress for animated progress bar
+                                this.onProgress(serverProgress, fileNameForTranscription);
                             }
 
                         } catch (e: any) {
                             message.error(`Error handling server update for ${fileNameForTranscription}: ${e.message}`);
-                            this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+                            this.onProgress(-1, fileNameForTranscription);
                             this.setEditorState('editor');
                             this.cleanupWebSocket();
                         }
@@ -272,13 +263,13 @@ export class SubtitleManager {
                 },
                 onStompError: (_frame) => {
                     message.error(`WebSocket STOMP error during ${operationType} for task ${taskId}.`);
-                    this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+                    this.onProgress(-1, fileNameForTranscription);
                     this.setEditorState('editor');
                     this.cleanupWebSocket();
                 },
                 onWebSocketError: (_event) => {
                     message.error(`WebSocket connection for ${operationType} (task ${taskId}) failed.`);
-                    this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+                    this.onProgress(-1, fileNameForTranscription);
                     this.setEditorState('editor');
                     this.cleanupWebSocket();
                 },
@@ -290,79 +281,198 @@ export class SubtitleManager {
             const errorMessage = error.response?.data?.message || error.response?.data || error.message || `Unknown ${operationType} error`;
             message.error(`${operationType} request failed: ${errorMessage}`);
             console.error(`${operationType} initiation error:`, error);
-            this.onProgress(-1, fileNameForTranscription); // No subtitles on error
+            this.onProgress(-1, fileNameForTranscription);
             this.setEditorState('editor');
             this.cleanupWebSocket();
         }
     }
 
-    // ... (rest of the SubtitleManager methods: updateSubtitleFontFamily, etc. remain the same) ...
-    public updateSubtitleFontFamily(font: string, currentTime: number, projectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
-        this.setProjectState(prev => ({ ...prev, subtitleFontFamily: font }));
-        this.drawFrame(currentTime, { ...projectState, subtitleFontFamily: font }, mediaElements);
+    // --- CÁC HÀM CẬP NHẬT SUBTITLE STYLE - ĐÃ SỬA ĐỔI ĐỂ GỌI drawFrame VÀ generateAssContent VỚI STATE MỚI NHẤT ---
+
+    public updateSubtitleFontFamily(font: string, currentTime: number, _staleProjectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
+        console.log("Subtitle font family updated to:", font);
+        this.setProjectState(prev => {
+            const newState = { ...prev, subtitleFontFamily: font };
+            this.drawFrame(currentTime, newState, mediaElements);
+            const updatedAssContent = this.generateAssContent(newState);
+            console.log("Generated ASS with updated font family:\n", updatedAssContent);
+            return newState;
+        });
     }
 
-    public updateSubtitleFontSize(size: number, currentTime: number, projectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
-        this.setProjectState(prev => ({ ...prev, subtitleFontSize: size }));
-        this.drawFrame(currentTime, { ...projectState, subtitleFontSize: size }, mediaElements);
+    public updateSubtitleFontSize(size: number, currentTime: number, _staleProjectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
+        console.log("Subtitle font size updated to:", size);
+        this.setProjectState(prev => {
+            const newState = { ...prev, subtitleFontSize: size };
+            this.drawFrame(currentTime, newState, mediaElements);
+            const updatedAssContent = this.generateAssContent(newState);
+            console.log("Generated ASS with updated font size:\n", updatedAssContent);
+            return newState;
+        });
     }
 
-    public updateSubtitleTextAlign(align: SubtitleTextAlign, currentTime: number, projectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
-        this.setProjectState(prev => ({ ...prev, subtitleTextAlign: align }));
-        this.drawFrame(currentTime, { ...projectState, subtitleTextAlign: align }, mediaElements);
+    public updateSubtitleTextAlign(align: SubtitleTextAlign, currentTime: number, _staleProjectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
+        console.log("Subtitle text alignment updated to:", align);
+        this.setProjectState(prev => {
+            const newState = { ...prev, subtitleTextAlign: align };
+            this.drawFrame(currentTime, newState, mediaElements);
+            const updatedAssContent = this.generateAssContent(newState);
+            console.log("Generated ASS with updated text alignment:\n", updatedAssContent);
+            return newState;
+        });
     }
 
-    public toggleSubtitleBold(currentTime: number, projectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
-        this.setProjectState(prev => ({ ...prev, isSubtitleBold: !prev.isSubtitleBold }));
-        this.drawFrame(currentTime, { ...projectState, isSubtitleBold: !projectState.isSubtitleBold }, mediaElements);
+    public toggleSubtitleBold(currentTime: number, _staleProjectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
+        this.setProjectState(prev => {
+            const newState = { ...prev, isSubtitleBold: !prev.isSubtitleBold };
+            console.log("Subtitle bold toggled. New state:", newState.isSubtitleBold);
+            this.drawFrame(currentTime, newState, mediaElements);
+            const updatedAssContent = this.generateAssContent(newState);
+            console.log("Generated ASS with updated bold state:\n", updatedAssContent);
+            return newState;
+        });
     }
 
-    public toggleSubtitleItalic(currentTime: number, projectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
-        this.setProjectState(prev => ({ ...prev, isSubtitleItalic: !prev.isSubtitleItalic }));
-        this.drawFrame(currentTime, { ...projectState, isSubtitleItalic: !projectState.isSubtitleItalic }, mediaElements);
+    public toggleSubtitleItalic(currentTime: number, _staleProjectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
+        this.setProjectState(prev => {
+            const newState = { ...prev, isSubtitleItalic: !prev.isSubtitleItalic };
+            console.log("Subtitle italic toggled. New state:", newState.isSubtitleItalic);
+            this.drawFrame(currentTime, newState, mediaElements);
+            const updatedAssContent = this.generateAssContent(newState);
+            console.log("Generated ASS with updated italic state:\n", updatedAssContent);
+            return newState;
+        });
     }
 
-    public toggleSubtitleUnderlined(currentTime: number, projectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
-        this.setProjectState(prev => ({ ...prev, isSubtitleUnderlined: !prev.isSubtitleUnderlined }));
-        this.drawFrame(currentTime, { ...projectState, isSubtitleUnderlined: !projectState.isSubtitleUnderlined }, mediaElements);
+    public toggleSubtitleUnderlined(currentTime: number, _staleProjectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
+        this.setProjectState(prev => {
+            const newState = { ...prev, isSubtitleUnderlined: !prev.isSubtitleUnderlined };
+            console.log("Subtitle underlined toggled. New state:", newState.isSubtitleUnderlined);
+            this.drawFrame(currentTime, newState, mediaElements);
+            const updatedAssContent = this.generateAssContent(newState);
+            console.log("Generated ASS with updated underline state:\n", updatedAssContent);
+            return newState;
+        });
     }
 
-    public updateSubtitleColor(color: string, currentTime: number, projectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
-        this.setProjectState(prev => ({ ...prev, subtitleColor: color }));
-        this.drawFrame(currentTime, { ...projectState, subtitleColor: color }, mediaElements);
+    public updateSubtitleColor(color: string, currentTime: number, _staleProjectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
+        console.log("Subtitle text color updated to:", color);
+        this.setProjectState(prev => {
+            const newState = { ...prev, subtitleColor: color };
+            this.drawFrame(currentTime, newState, mediaElements);
+            const updatedAssContent = this.generateAssContent(newState);
+            console.log("Generated ASS with updated text color:\n", updatedAssContent);
+            return newState;
+        });
     }
 
-    public updateSubtitleBackgroundColor(color: string, currentTime: number, projectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
-        this.setProjectState(prev => ({ ...prev, subtitleBackgroundColor: color }));
-        this.drawFrame(currentTime, { ...projectState, subtitleBackgroundColor: color }, mediaElements);
+    public updateSubtitleBackgroundColor(color: string, currentTime: number, _staleProjectState: ProjectState, mediaElements: { [key: string]: HTMLVideoElement | HTMLImageElement }): void {
+        console.log("Subtitle background color updated to:", color);
+        this.setProjectState(prev => {
+            const newState = { ...prev, subtitleBackgroundColor: color };
+            this.drawFrame(currentTime, newState, mediaElements);
+            const updatedAssContent = this.generateAssContent(newState);
+            console.log("Generated ASS with updated background color:\n", updatedAssContent);
+            return newState;
+        });
     }
 
+    // --- HÀM TẠO ASS CONTENT - KHÔNG THAY ĐỔI VÌ NÓ ĐÃ SỬ DỤNG projectState ĐƯỢC TRUYỀN VÀO ---
     public generateAssContent(projectState: ProjectState): string {
         const {
             canvasDimensions, subtitles, subtitleFontFamily, subtitleFontSize, subtitleColor,
             subtitleBackgroundColor, isSubtitleBold, isSubtitleItalic, isSubtitleUnderlined, subtitleTextAlign
         } = projectState;
-        // If subtitles are empty, still generate the rest of the ASS structure
-        const scriptInfo = `[Script Info]\nTitle: ${projectState.projectName || 'Untitled Project'}\nScriptType: v4.00+\nPlayResX: ${canvasDimensions.width}\nPlayResY: ${canvasDimensions.height}\nCollisions: Normal\nWrapStyle: 0\n`;
+
+        // --- DEBUGGING LOGS: Kiểm tra giá trị của projectState tại thời điểm này ---
+        console.log("--- generateAssContent Debug (Final State for ASS Generation) ---");
+        console.log("projectState.subtitleColor:", subtitleColor);
+        console.log("projectState.subtitleBackgroundColor:", subtitleBackgroundColor);
+        console.log("projectState.isSubtitleBold:", isSubtitleBold);
+        console.log("projectState.isSubtitleItalic:", isSubtitleItalic);
+        console.log("projectState.isSubtitleUnderlined:", isSubtitleUnderlined);
+        console.log("projectState.subtitleTextAlign:", subtitleTextAlign);
+        console.log("--- End Debug ---");
+
+        // Các giá trị mặc định và hằng số cho ASS
+        const defaultStrikeOut = 0;
+        const defaultScaleX = 100;
+        const defaultScaleY = 100;
+        const defaultSpacing = 0;
+        const defaultAngle = 0;
+        const defaultMarginL = 10;
+        const defaultMarginR = 10;
+        const defaultMarginV = 10;
+        const defaultEncoding = 1; // 1 for ANSI, 0 for Shift-JIS, etc.
+
+        // [Script Info] Section
+        const scriptInfo = `[Script Info]\n` +
+            `Title: ${projectState.projectName || 'Untitled Project'}\n` +
+            `Original Script: Generated by Video Editor\n` +
+            `ScriptType: v4.00+\n` +
+            `PlayResX: ${canvasDimensions.width}\n` +
+            `PlayResY: ${canvasDimensions.height}\n` +
+            `WrapStyle: 0\n` +
+            `Collisions: Normal\n` +
+            `Timer: 100.0000\n`;
+
+        // [V4+ Styles] Section
         const assPrimaryColour = convertColorToAss(subtitleColor);
-        const assBackColour = convertColorToAss(subtitleBackgroundColor);
+        const assSecondaryColour = assPrimaryColour; // Can be different for karaoke effects
+        const assOutlineColour = '&H00000000'; // Black outline for readability. Có thể làm cho nó configurable nếu muốn
+
         const bold = isSubtitleBold ? -1 : 0;
         const italic = isSubtitleItalic ? -1 : 0;
         const underline = isSubtitleUnderlined ? -1 : 0;
         const alignment = getAssAlignment(subtitleTextAlign);
-        const stylesFormat = "Format: Name, Fontname, Fontsize, PrimaryColour, BackColour, Bold, Italic, Underline, Alignment";
-        const defaultStyle = `Style: Default,${subtitleFontFamily},${subtitleFontSize},${assPrimaryColour},${assBackColour},${bold},${italic},${underline},${alignment}`;
+
+        let effectiveBorderStyle;
+        let assBackColour; // This will be the shadow color if BorderStyle=1, or box background color if BorderStyle=3
+        let effectiveOutline; // Thickness of the outline in pixels
+        let effectiveShadow; // Depth of the shadow in pixels
+
+        // Determine if an opaque background is desired based on subtitleBackgroundColor
+        const isOpaqueBackgroundDesired = subtitleBackgroundColor && subtitleBackgroundColor.toLowerCase() !== '#00000000' && subtitleBackgroundColor.toLowerCase() !== 'transparent';
+
+
+        if (isOpaqueBackgroundDesired) {
+            // Use BorderStyle 3 for an opaque box background
+            effectiveBorderStyle = 3;
+            assBackColour = convertColorToAss(subtitleBackgroundColor); // This is the box's color
+            effectiveOutline = 0; // Outline property is ignored with BorderStyle 3
+            effectiveShadow = 0; // Shadow property is ignored with BorderStyle 3
+        } else {
+            // Use BorderStyle 1 for outline + shadow effect (default if no opaque background)
+            effectiveBorderStyle = 1;
+            assBackColour = '&H00000000'; // This is the shadow color (black for shadows). Có thể làm cho nó configurable nếu muốn
+            effectiveOutline = 2; // Default outline thickness (e.g., 2 pixels). Có thể làm cho nó configurable nếu muốn
+            effectiveShadow = 0; // Default shadow depth (e.g., 0 for no shadow, or 2 for a slight shadow). Có thể làm cho nó configurable nếu muốn
+        }
+
+        const stylesFormat = "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding";
+
+        const defaultStyle = `Style: Default,${subtitleFontFamily},${subtitleFontSize},` +
+            `${assPrimaryColour},${assSecondaryColour},${assOutlineColour},${assBackColour},` +
+            `${bold},${italic},${underline},${defaultStrikeOut},` +
+            `${defaultScaleX},${defaultScaleY},${defaultSpacing},${defaultAngle},` +
+            `${effectiveBorderStyle},${effectiveOutline},${effectiveShadow},${alignment},` +
+            `${defaultMarginL},${defaultMarginR},${defaultMarginV},${defaultEncoding}`;
+
         const styles = `[V4+ Styles]\n${stylesFormat}\n${defaultStyle}\n`;
-        const eventsFormat = "Format: Start, End, Style, Text";
+
+        // [Events] Section
+        const eventsFormat = "Format: Layer, Start, End, Style, Actor, MarginL, MarginR, MarginV, Effect, Text";
         const eventLines = subtitles && subtitles.length > 0
             ? subtitles.map(sub => {
                 const start = formatTimeToAss(sub.startTime);
                 const end = formatTimeToAss(sub.endTime);
-                const text = sub.text.replace(/\n/g, '\\N');
-                return `Dialogue: ${start},${end},Default,${text}`;
+                const text = sub.text.replace(/\n/g, '\\N'); // Replace newlines with ASS newline character
+                return `Dialogue: 0,${start},${end},Default,,${defaultMarginL},${defaultMarginR},${defaultMarginV},,${text}`;
             }).join('\n')
-            : ""; // Empty string if no subtitles
+            : "";
+
         const events = `[Events]\n${eventsFormat}\n${eventLines}\n`;
+
         return `${scriptInfo}\n${styles}\n${events}`;
     }
 }

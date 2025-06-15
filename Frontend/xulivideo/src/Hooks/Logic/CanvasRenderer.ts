@@ -143,103 +143,106 @@ export class CanvasRenderer {
         });
 
         // Draw Subtitles (if any)
-        const activeSubtitle = projectState.subtitles.find(sub => time >= sub.startTime && time < sub.endTime);
-        if (activeSubtitle) {
-            ctx.save();
-            const fontSize = projectState.subtitleFontSize || 24;
-            const fontFamily = projectState.subtitleFontFamily || 'Arial';
-            const textAlign = projectState.subtitleTextAlign || 'center';
-            const isBold = projectState.isSubtitleBold ?? false;
-            const isItalic = projectState.isSubtitleItalic ?? false;
-            const isUnderlined = projectState.isSubtitleUnderlined ?? false;
-            const fillColor = projectState.subtitleColor || '#FFFFFF'; // from projectState
-            const backgroundColor = projectState.subtitleBackgroundColor || 'rgba(0,0,0,0.7)'; // from projectState
-            const outlineColor = '#000000'; // Example, or use a constant
-            const outlineWidth =  SUBTITLE_OUTLINE_WIDTH;
+        if (projectState.areSubtitlesVisibleOnCanvas) { // ONLY draw if this flag is true
+            // Draw Subtitles (if any)
+            const activeSubtitle = projectState.subtitles.find(sub => time >= sub.startTime && time < sub.endTime);
+            if (activeSubtitle) {
+                ctx.save();
+                const fontSize = projectState.subtitleFontSize || 24;
+                const fontFamily = projectState.subtitleFontFamily || 'Arial';
+                const textAlign = projectState.subtitleTextAlign || 'center';
+                const isBold = projectState.isSubtitleBold ?? false;
+                const isItalic = projectState.isSubtitleItalic ?? false;
+                const isUnderlined = projectState.isSubtitleUnderlined ?? false;
+                const fillColor = projectState.subtitleColor || '#FFFFFF'; // from projectState
+                const backgroundColor = projectState.subtitleBackgroundColor || 'rgba(0,0,0,0.7)'; // from projectState
+                const outlineColor = '#000000'; // Example, or use a constant
+                const outlineWidth =  SUBTITLE_OUTLINE_WIDTH;
 
 
-            const fontStyle = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
-            ctx.font = fontStyle;
-            ctx.textAlign = textAlign;
-            ctx.textBaseline = 'alphabetic'; // Align text based on the alphabetic baseline
+                const fontStyle = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
+                ctx.font = fontStyle;
+                ctx.textAlign = textAlign;
+                ctx.textBaseline = 'alphabetic'; // Align text based on the alphabetic baseline
 
-            // Calculate scaled max width for subtitles based on canvas size
-            const scaledSubtitleMaxWidth = (SUBTITLE_MAX_WIDTH_PX / 1280) * canvasWidth; // Assuming 1280 is reference
-            const wrappedLines = getWrappedLines(ctx, activeSubtitle.text, scaledSubtitleMaxWidth);
-            const lineHeight = fontSize * SUBTITLE_LINE_HEIGHT_MULTIPLIER;
-            const totalTextHeight = wrappedLines.length * lineHeight;
+                // Calculate scaled max width for subtitles based on canvas size
+                const scaledSubtitleMaxWidth = (SUBTITLE_MAX_WIDTH_PX / 1280) * canvasWidth; // Assuming 1280 is reference
+                const wrappedLines = getWrappedLines(ctx, activeSubtitle.text, scaledSubtitleMaxWidth);
+                const lineHeight = fontSize * SUBTITLE_LINE_HEIGHT_MULTIPLIER;
+                const totalTextHeight = wrappedLines.length * lineHeight;
 
-            let xPos: number;
-            switch (textAlign) {
-                case 'left': xPos = canvasWidth * 0.05; break; // Small margin from left
-                case 'right': xPos = canvasWidth * 0.95; break; // Small margin from right
-                case 'center': default: xPos = canvasWidth / 2; break;
-            }
-
-            // Y position for the *baseline* of the *last line* of text
-            const lastLineBaselineY = canvasHeight - SUBTITLE_BOTTOM_MARGIN_PX;
-
-            // Optional: Draw background for subtitles
-            if (backgroundColor && backgroundColor !== 'transparent' && wrappedLines.length > 0) {
-                let maxLineWidth = 0;
-                wrappedLines.forEach(line => maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width));
-
-                const padding = fontSize * 0.2; // Dynamic padding
-                const bgWidth = maxLineWidth + 2 * padding;
-                const bgHeight = totalTextHeight + (fontSize * (SUBTITLE_LINE_HEIGHT_MULTIPLIER -1) * 0.5) ; // Adjusted height for better fit
-
-                let bgX;
-                // Y for top of background box. lastLineBaselineY is baseline of last line.
-                // So, totalTextHeight up from there is roughly top of first line's text area.
-                const bgY = lastLineBaselineY - totalTextHeight + (lineHeight - fontSize) / 2  - padding + (fontSize * (SUBTITLE_LINE_HEIGHT_MULTIPLIER -1) * 0.25);
-
-
+                let xPos: number;
                 switch (textAlign) {
-                    case 'left': bgX = xPos - padding; break;
-                    case 'right': bgX = xPos - maxLineWidth - padding; break;
-                    case 'center': default: bgX = xPos - bgWidth / 2; break;
-                }
-                ctx.fillStyle = backgroundColor;
-                ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
-            }
-
-
-            // Draw text (outline then fill)
-            wrappedLines.forEach((line, index) => {
-                const lineBaselineY = lastLineBaselineY - (wrappedLines.length - 1 - index) * lineHeight;
-                if (outlineWidth > 0 && outlineColor) {
-                    ctx.strokeStyle = outlineColor;
-                    ctx.lineWidth = outlineWidth;
-                    ctx.lineJoin = 'round'; // Smoother outlines
-                    ctx.miterLimit = 2;
-                    ctx.strokeText(line, xPos, lineBaselineY);
-                }
-                if (fillColor) {
-                    ctx.fillStyle = fillColor;
-                    ctx.fillText(line, xPos, lineBaselineY);
+                    case 'left': xPos = canvasWidth * 0.05; break; // Small margin from left
+                    case 'right': xPos = canvasWidth * 0.95; break; // Small margin from right
+                    case 'center': default: xPos = canvasWidth / 2; break;
                 }
 
-                // Draw underline if enabled
-                if (isUnderlined) {
-                    const metrics = ctx.measureText(line);
-                    const textWidth = metrics.width;
-                    let underlineStartX;
+                // Y position for the *baseline* of the *last line* of text
+                const lastLineBaselineY = canvasHeight - SUBTITLE_BOTTOM_MARGIN_PX;
+
+                // Optional: Draw background for subtitles
+                if (backgroundColor && backgroundColor !== 'transparent' && wrappedLines.length > 0) {
+                    let maxLineWidth = 0;
+                    wrappedLines.forEach(line => maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width));
+
+                    const padding = fontSize * 0.2; // Dynamic padding
+                    const bgWidth = maxLineWidth + 2 * padding;
+                    const bgHeight = totalTextHeight + (fontSize * (SUBTITLE_LINE_HEIGHT_MULTIPLIER -1) * 0.5) ; // Adjusted height for better fit
+
+                    let bgX;
+                    // Y for top of background box. lastLineBaselineY is baseline of last line.
+                    // So, totalTextHeight up from there is roughly top of first line's text area.
+                    const bgY = lastLineBaselineY - totalTextHeight + (lineHeight - fontSize) / 2  - padding + (fontSize * (SUBTITLE_LINE_HEIGHT_MULTIPLIER -1) * 0.25);
+
+
                     switch (textAlign) {
-                        case 'left': underlineStartX = xPos; break;
-                        case 'right': underlineStartX = xPos - textWidth; break;
-                        case 'center': default: underlineStartX = xPos - textWidth / 2; break;
+                        case 'left': bgX = xPos - padding; break;
+                        case 'right': bgX = xPos - maxLineWidth - padding; break;
+                        case 'center': default: bgX = xPos - bgWidth / 2; break;
                     }
-                    // metrics.actualBoundingBoxDescent might be useful if available and reliable
-                    const underlineY = lineBaselineY + Math.max(2, fontSize * 0.08); // Position slightly below baseline
-                    ctx.strokeStyle = fillColor; // Underline usually matches text color
-                    ctx.lineWidth = Math.max(1, fontSize / 15); // Thinner line for underline
-                    ctx.beginPath();
-                    ctx.moveTo(underlineStartX, underlineY);
-                    ctx.lineTo(underlineStartX + textWidth, underlineY);
-                    ctx.stroke();
+                    ctx.fillStyle = backgroundColor;
+                    ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
                 }
-            });
-            ctx.restore();
+
+
+                // Draw text (outline then fill)
+                wrappedLines.forEach((line, index) => {
+                    const lineBaselineY = lastLineBaselineY - (wrappedLines.length - 1 - index) * lineHeight;
+                    if (outlineWidth > 0 && outlineColor) {
+                        ctx.strokeStyle = outlineColor;
+                        ctx.lineWidth = outlineWidth;
+                        ctx.lineJoin = 'round'; // Smoother outlines
+                        ctx.miterLimit = 2;
+                        ctx.strokeText(line, xPos, lineBaselineY);
+                    }
+                    if (fillColor) {
+                        ctx.fillStyle = fillColor;
+                        ctx.fillText(line, xPos, lineBaselineY);
+                    }
+
+                    // Draw underline if enabled
+                    if (isUnderlined) {
+                        const metrics = ctx.measureText(line);
+                        const textWidth = metrics.width;
+                        let underlineStartX;
+                        switch (textAlign) {
+                            case 'left': underlineStartX = xPos; break;
+                            case 'right': underlineStartX = xPos - textWidth; break;
+                            case 'center': default: underlineStartX = xPos - textWidth / 2; break;
+                        }
+                        // metrics.actualBoundingBoxDescent might be useful if available and reliable
+                        const underlineY = lineBaselineY + Math.max(2, fontSize * 0.08); // Position slightly below baseline
+                        ctx.strokeStyle = fillColor; // Underline usually matches text color
+                        ctx.lineWidth = Math.max(1, fontSize / 15); // Thinner line for underline
+                        ctx.beginPath();
+                        ctx.moveTo(underlineStartX, underlineY);
+                        ctx.lineTo(underlineStartX + textWidth, underlineY);
+                        ctx.stroke();
+                    }
+                });
+                ctx.restore();
+            }
         }
     }
 }

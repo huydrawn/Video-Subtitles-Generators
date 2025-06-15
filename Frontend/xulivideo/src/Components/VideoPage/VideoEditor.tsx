@@ -61,6 +61,9 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
         isExtractingAudio,
         audioExtractionProgress,
         ffmpegLoaded,
+        isApiBurningSubtitles,
+        apiBurningProgress,
+        handleBurnSubtitlesViaApi
     } = logic; // Destructure directly from logic as these are core editor features
 
     // --- Logic for getFirstVideoAssetDuration (needed by Export Modal) ---
@@ -212,9 +215,27 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
                                 </Space>
                             )}
                         </Space>
-                        <Button onClick={exportModalLogic.showExportModal} icon={<DownloadOutlined />}>
-                            Export Options
-                        </Button>
+                        {/* START: Đoạn code đã sửa */}
+                        <Space size="middle"> {/* Sử dụng Space để nhóm các nút cạnh nhau */}
+                            <Button
+                                onClick={handleBurnSubtitlesViaApi} // <-- Gọi hàm API mới ở đây
+                                icon={<FileTextOutlined />}
+                                // Disable button nếu đang trong quá trình xử lý, hoặc không có video/phụ đề
+                                disabled={
+                                    logic.isApiBurningSubtitles ||
+                                    !logic.selectedVideoSecureUrl ||
+                                    logic.projectState.subtitles.length === 0
+                                }
+                                loading={logic.isApiBurningSubtitles} // Hiển thị spinner khi đang tải
+                            >
+                                {/* Thay đổi text để hiển thị tiến độ */}
+                                {logic.isApiBurningSubtitles ? `Adding... ${logic.apiBurningProgress}%` : 'Add Subtitles to Video'}
+                            </Button>
+                            <Button onClick={exportModalLogic.showExportModal} icon={<DownloadOutlined />}>
+                                Export Options
+                            </Button>
+                        </Space>
+                        {/* END: Đoạn code đã sửa */}
                         <Space size="middle" style={{marginRight:'30px'}}>
                             <Button
                                 type="primary"
@@ -229,7 +250,7 @@ const VideoEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
                                 }
                                 loading={logic.isBurningSubtitles}
                             >
-                                {logic.isBurningSubtitles ? `Burning... ${logic.burningProgress}%` : 'Burn Subtitles'}
+                                {logic.isBurningSubtitles ? `Burning... ${logic.burningProgress}%` : 'Burn Subtitles (Client)'} {/* Đổi tên để phân biệt */}
                             </Button>
                         </Space>
                     </Header>

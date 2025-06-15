@@ -39,6 +39,15 @@ export interface Clip {
     fontFamily?: string;
 }
 
+// Thêm định nghĩa VideoClip ở đây
+export interface VideoClip extends Clip {
+    type: 'video'; // Cụ thể hóa thuộc tính 'type' thành 'video'
+    // Nếu có bất kỳ thuộc tính nào chỉ dành riêng cho video mà không có trong Clip chung, bạn có thể thêm ở đây.
+    // Ví dụ:
+    // videoCodec?: string;
+    // frameRate?: number;
+}
+
 export interface Track {
     id: string;
     clips: Clip[];
@@ -101,6 +110,7 @@ export interface EditorProjectState {
     subtitleColor: string;
     subtitleBackgroundColor: string;
     processingProgress?: number;
+    areSubtitlesVisibleOnCanvas?: boolean;
 }
 
 // For useVideoEditorLogic.ts, SubtitleManager.ts, UploadManager.ts,

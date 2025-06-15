@@ -51,6 +51,13 @@ export class UploadManager {
         if (!files || files.length === 0) { event.target.value = ''; return; }
         const file = files[0];
         const originalFileName = file.name;
+
+        // --- NEW: Add the desired prefix to the filename for logging ---
+        const simulatedLocalPath = `C:\\Users\\ADMIN\\Videos\\${originalFileName}`;
+        console.log(`User selected local file: ${simulatedLocalPath} (Type: ${file.type}, Size: ${file.size} bytes)`);
+        console.warn("Note: The path above is simulated. Browsers do not allow access to the full local file path for security reasons.");
+        // --- END NEW ---
+
         if (!file.type.startsWith('video/') && !file.type.startsWith('image/')) {
             message.error(`${originalFileName} is not a supported video or image file.`);
             event.target.value = ''; return;
