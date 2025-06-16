@@ -1,18 +1,17 @@
-// src/Components/HomePage/VideoPage.utils.ts (đổi tên từ utils.tsx)
+// src/Components/VideoPage/utils.ts
+
 import React, { useState, useEffect } from 'react';
 import {
     Card, Menu, Dropdown, Button, Typography,
-} from 'antd'; // Thêm Card vào import
+} from 'antd';
 import {
     EditOutlined, DeleteOutlined, EllipsisOutlined, PictureOutlined, SunOutlined, MoonOutlined,
-    StopOutlined, StarOutlined, RocketOutlined, CrownOutlined // Import thêm các icon cho plans
+    StopOutlined, StarOutlined, RocketOutlined, CrownOutlined
 } from '@ant-design/icons';
 import * as DarkReader from 'darkreader';
 
-// CHỈNH SỬA Ở ĐÂY
 const { Text } = Typography;
-const { Meta } = Card; // Meta thuộc về Card, không phải Typography
-
+const { Meta } = Card;
 
 // --- Custom Hook: useDebounce ---
 export function useDebounce<T>(value: T, delay: number): T {
@@ -45,7 +44,7 @@ export interface Project {
         secureUrl: string;
         resourceType: string;
         format: string;
-        duration: number;
+        duration: number; // in seconds
         bytes: number;
         width: number;
         height: number;
@@ -68,9 +67,26 @@ export interface UserDTO {
     email: string;
     createdAt: string;
     updatedAt: string;
-    status: string; // Represents the current plan/tier, e.g., "FREE", "BASIC", "PRO"
+    status: string; // Represents the current plan/tier, e.g., "FREE", "BASIC", "PRO" (should match AccountTierDTO.name)
     workspace: Workspace | null;
+    accountTier: AccountTierDTO;
 }
+
+// MỚI: Định nghĩa kiểu dữ liệu cho AccountTierDTO từ backend
+export interface AccountTierDTO {
+    name: string; // Tên của gói (ví dụ: "FREE", "BASIC", "PRO", "PREMIUM")
+    storageLimitMb: number;
+    priceInCents: number;
+    formattedPrice: string; // Giá đã định dạng từ backend
+}
+
+// MỚI: Interface cho dữ liệu gói đã được bổ sung thông tin hiển thị UI
+export interface DisplayPlan extends AccountTierDTO {
+    title: string; // Tên thân thiện với người dùng (ví dụ: "Free", "Basic")
+    color: string; // Màu sắc cho các phần tử UI
+    icon: React.ReactNode; // Icon cho các phần tử UI
+}
+
 
 // --- Helper function to format bytes ---
 export const formatBytes = (bytes: number, decimals = 2): string => {
@@ -83,12 +99,21 @@ export const formatBytes = (bytes: number, decimals = 2): string => {
 };
 
 // --- Helper function to format storage from MB ---
-export const formatStorageFromMB = (mb: number): string => {
+export const formatStorageFromMB = (mb: number | undefined): string => { // Thêm undefined vào kiểu
+    if (typeof mb === 'undefined' || mb === null) return "N/A"; // Xử lý undefined/null
     if (mb < 1024) {
         return `${mb.toFixed(1).replace(/\.0$/, '')} MB`;
     }
     return `${(mb / 1024).toFixed(1).replace(/\.0$/, '')} GB`;
 };
+
+// --- Helper function to format price (sử dụng này hoặc formattedPrice từ backend) ---
+export const formatPrice = (priceInCents: number | undefined): string => { // Thêm undefined vào kiểu
+    if (typeof priceInCents === 'undefined' || priceInCents === null) return "N/A";
+    if (priceInCents === 0) return "Miễn phí"; // Đổi "Free" thành "Miễn phí" cho tiếng Việt
+    return `$${(priceInCents / 100.0).toFixed(2)}`;
+};
+
 
 // --- Dark Mode Toggle Component ---
 export const DarkModeToggle = () => {
@@ -100,6 +125,7 @@ export const DarkModeToggle = () => {
         try {
             return persisted ? JSON.parse(persisted) : DarkReader.isEnabled();
         } catch (error) {
+            // Fallback if parsing fails or DarkReader issues
             return DarkReader.isEnabled();
         }
     });
@@ -111,10 +137,10 @@ export const DarkModeToggle = () => {
         const currentlyEnabled = DarkReader.isEnabled();
         if (isDarkMode && !currentlyEnabled) {
             try { DarkReader.enable({ brightness: 100, contrast: 90, sepia: 10 }); }
-            catch (error) { setIsDarkMode(false); }
+            catch (error) { console.error("Error enabling DarkReader:", error); setIsDarkMode(false); }
         } else if (!isDarkMode && currentlyEnabled) {
             try { DarkReader.disable(); }
-            catch (error) { setIsDarkMode(true); }
+            catch (error) { console.error("Error disabling DarkReader:", error); setIsDarkMode(true); }
         }
     }, [isDarkMode]);
 
@@ -126,10 +152,13 @@ export const DarkModeToggle = () => {
             else DarkReader.disable();
             setIsDarkMode(newState);
             localStorage.setItem('darkModeEnabled', JSON.stringify(newState));
-        } catch (error) { setIsDarkMode(isDarkMode); }
+        } catch (error) {
+            console.error("Error toggling DarkReader:", error);
+            setIsDarkMode(isDarkMode); // Revert if there's an error
+        }
     };
 
-    if (typeof DarkReader.enable !== 'function') return null;
+    if (typeof DarkReader.enable !== 'function') return null; // Render nothing if DarkReader is not available
 
     return (
         <Button
@@ -138,7 +167,7 @@ export const DarkModeToggle = () => {
             icon={isDarkMode ? <SunOutlined /> : <MoonOutlined />}
             onClick={toggleDarkMode}
             style={{ fontSize: "20px", color: 'unset' }}
-            aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label={isDarkMode ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
         />
     );
 };
@@ -159,7 +188,7 @@ export const ProjectCard: React.FC<{
                 month: '2-digit', day: '2-digit', year: 'numeric'
             });
         }
-        catch (e) { return 'Invalid Date'; }
+        catch (e) { return 'Ngày không hợp lệ'; }
     };
     let durationString = '';
     if (video?.duration) {
@@ -173,10 +202,10 @@ export const ProjectCard: React.FC<{
     const menu = (
         <Menu onClick={(e) => e.domEvent.stopPropagation()}>
             <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => onRename(project)}>
-                Edit Details
+                Chỉnh sửa chi tiết
             </Menu.Item>
             <Menu.Item key="delete" icon={<DeleteOutlined />} danger onClick={() => onDelete(project)}>
-                Delete Project
+                Xóa dự án
             </Menu.Item>
         </Menu>
     );
@@ -234,19 +263,19 @@ export const ProjectCard: React.FC<{
                     ellipsis={{ tooltip: projectName }}
                     style={{ fontSize: 14, display: 'block', marginBottom: 4 }}
                 >
-                    {projectName || 'Untitled Project'}
+                    {projectName || 'Dự án không có tiêu đề'}
                 </Text>
                 <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
                     {ownerName}, {formatDate(updatedAt)}
                 </Text>
                 {durationString && (
                     <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
-                        Duration: {durationString}
+                        Thời lượng: {durationString}
                     </Text>
                 )}
                 {dimensionsString && (
                     <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
-                        Dimensions: {dimensionsString}
+                        Kích thước: {dimensionsString}
                     </Text>
                 )}
             </div>
@@ -265,7 +294,7 @@ export const ProjectCard: React.FC<{
                         shape="circle"
                         icon={<EllipsisOutlined style={{ fontSize: 18, color: '#333' }} />}
                         onClick={e => { e.preventDefault(); e.stopPropagation(); }}
-                        aria-label="Project options"
+                        aria-label="Tùy chọn dự án"
                     />
                 </Dropdown>
             </div>
@@ -273,27 +302,23 @@ export const ProjectCard: React.FC<{
     );
 };
 
-// --- Plan Data ---
-export const plans = [
-    {
-        key: "FREE", title: "Free", priceInCents: 0, storageLimitMb: 100,
-        icon: React.createElement(StopOutlined, { style: { fontSize: 24, color: '#8c8c8c' } }), color: '#8c8c8c',
-    },
-    {
-        key: "BASIC", title: "Basic", priceInCents: 200, storageLimitMb: 200,
-        icon: React.createElement(StarOutlined, { style: { fontSize: 24, color: '#1890ff' } }), color: '#1890ff',
-    },
-    {
-        key: "PRO", title: "Pro", priceInCents: 500, storageLimitMb: 500,
-        icon: React.createElement(RocketOutlined, { style: { fontSize: 24, color: '#52c41a' } }), color: '#52c41a',
-    },
-    {
-        key: "PREMIUM", title: "Premium", priceInCents: 1000, storageLimitMb: 1024,
-        icon: React.createElement(CrownOutlined, { style: { fontSize: 24, color: '#faad14' } }), color: '#faad14',
-    },
-];
 
-export const formatPrice = (priceInCents: number) => {
-    if (priceInCents === 0) return "Free";
-    return `$${(priceInCents / 100.0).toFixed(2)}`;
+// MỚI: Hàm trợ giúp để bổ sung các thuộc tính UI vào dữ liệu gói từ backend
+export const getDisplayPlans = (backendTiers: AccountTierDTO[]): DisplayPlan[] => {
+    const tierDisplayMapping: { [key: string]: { title: string; color: string; icon: React.ReactNode } } = {
+        "FREE": { title: "Miễn phí", color: '#bfbfbf', icon: <StopOutlined /> },
+        "BASIC": { title: "Cơ bản", color: '#1890ff', icon: <StarOutlined /> },
+        "PRO": { title: "Pro", color: '#a0d911', icon: <RocketOutlined /> },
+        "PREMIUM": { title: "Premium", color: '#faad14', icon: <CrownOutlined /> },
+    };
+
+    return backendTiers.map(tier => ({
+        ...tier,
+        title: tierDisplayMapping[tier.name]?.title || tier.name,
+        color: tierDisplayMapping[tier.name]?.color || '#9254de', // Màu mặc định nếu không khớp
+        icon: tierDisplayMapping[tier.name]?.icon || <StarOutlined />, // Icon mặc định
+    })).sort((a, b) => { // Sắp xếp để duy trì thứ tự nhất quán trong UI
+        const order = ["FREE", "BASIC", "PRO", "PREMIUM"];
+        return order.indexOf(a.name) - order.indexOf(b.name);
+    });
 };

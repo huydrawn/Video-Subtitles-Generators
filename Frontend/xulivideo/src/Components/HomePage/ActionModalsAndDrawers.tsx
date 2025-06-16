@@ -1,4 +1,3 @@
-// src/Components/VideoPage/ActionModalsAndDrawers.tsx
 import React from 'react';
 import {
     Modal, Form, Input, Button, Drawer, Space, Card, Progress, Radio, Alert, Row, Col, Badge, Typography, Divider, Spin
@@ -15,7 +14,7 @@ import { logoutUser } from '../../Store/useSlice';
 import { useNavigate } from 'react-router-dom';
 
 // Shared Utilities & Interfaces
-import { Project, UserDTO, plans, formatPrice, formatStorageFromMB } from './utils';
+import { Project, UserDTO, DisplayPlan, formatPrice, formatStorageFromMB } from './utils';
 const { Meta } = Card;
 const { Title, Text } = Typography
 
@@ -56,6 +55,9 @@ interface ActionModalsAndDrawersProps {
     setStripeError: (error: string | null) => void; // Allow clearing error from within this component
 
     screens: { [key: string]: boolean };
+
+    // PROP MỚI: Định nghĩa các gói tài khoản từ backend (đã bổ sung thông tin hiển thị)
+    accountTiers: DisplayPlan[];
 }
 
 export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
@@ -71,21 +73,25 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                                                                   // Upgrade
                                                                                   isUpgradeModalVisible, handleUpgradeModalCancel, selectedAccountTier,
                                                                                   setSelectedAccountTier, handleCreateStripeSession, stripeLoading, stripeError, setStripeError,
-                                                                                  screens
+                                                                                  screens,
+                                                                                  accountTiers
                                                                               }) => {
-    const displayedUsername = userData?.username || 'User';
+    const displayedUsername = userData?.username || 'Người dùng';
     const displayedEmail = userData?.email || 'email@example.com';
+
+    // Tìm thông tin hiển thị của gói hiện tại
+    const currentDisplayPlan = accountTiers.find(p => p.name === userData?.status);
 
     return (
         <>
             {/* Create Project Modal */}
             <Modal
-                title="Create New Project"
+                title="Tạo dự án mới"
                 open={isCreateModalVisible}
                 onCancel={handleCreateModalCancel}
                 footer={[
                     <Button key="back" onClick={handleCreateModalCancel} disabled={isSubmittingProject}>
-                        Cancel
+                        Hủy
                     </Button>,
                     <Button
                         key="submit"
@@ -96,10 +102,10 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                 .then((values: { projectName: string; description: string }) => {
                                     handleCreateProjectSubmit(values);
                                 })
-                                .catch((info: any) => { console.log('Validate Failed:', info); });
+                                .catch((info: any) => { console.log('Xác thực thất bại:', info); });
                         }}
                     >
-                        Create
+                        Tạo
                     </Button>,
                 ]}
             >
@@ -111,25 +117,25 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                 >
                     <Form.Item
                         name="projectName"
-                        label="Project Name"
-                        rules={[{ required: true, message: 'Please enter a project name!' }]}
+                        label="Tên dự án"
+                        rules={[{ required: true, message: 'Vui lòng nhập tên dự án!' }]}
                     >
-                        <Input placeholder="e.g., My Awesome Video" />
+                        <Input placeholder="ví dụ: Video tuyệt vời của tôi" />
                     </Form.Item>
-                    <Form.Item name="description" label="Description (Optional)">
-                        <Input.TextArea rows={4} placeholder="A short description of your project" />
+                    <Form.Item name="description" label="Mô tả (Tùy chọn)">
+                        <Input.TextArea rows={4} placeholder="Mô tả ngắn gọn về dự án của bạn" />
                     </Form.Item>
                 </Form>
             </Modal>
 
             {/* Rename Project Modal */}
             <Modal
-                title="Rename Project"
+                title="Đổi tên dự án"
                 open={isRenameModalVisible}
                 onCancel={handleRenameModalCancel}
                 footer={[
                     <Button key="back" onClick={handleRenameModalCancel} disabled={isProjectActionLoading}>
-                        Cancel
+                        Hủy
                     </Button>,
                     <Button
                         key="submit"
@@ -140,27 +146,27 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                 .then((values: { newName: string }) => {
                                     handleRenameProjectSubmit(values);
                                 })
-                                .catch((info: any) => { console.log('Validate Failed:', info); });
+                                .catch((info: any) => { console.log('Xác thực thất bại:', info); });
                         }}
                     >
-                        Accept
+                        Chấp nhận
                     </Button>,
                 ]}
             >
                 <Form form={renameForm} layout="vertical" name="rename_project_form">
                     <Form.Item
                         name="newName"
-                        label="New Project Name"
-                        rules={[{ required: true, message: 'Please enter the new project name!' }]}
+                        label="Tên dự án mới"
+                        rules={[{ required: true, message: 'Vui lòng nhập tên dự án mới!' }]}
                     >
-                        <Input placeholder="Enter new project name" />
+                        <Input placeholder="Nhập tên dự án mới" />
                     </Form.Item>
                 </Form>
             </Modal>
 
             {/* Settings Drawer */}
             <Drawer
-                title="Account Settings"
+                title="Cài đặt tài khoản"
                 placement="right"
                 onClose={closeSettingsPanel}
                 open={isSettingsPanelVisible}
@@ -185,16 +191,18 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                             />
                         </Card>
 
-                        <Card title={<Space><DatabaseOutlined /> Storage Usage</Space>}>
+                        <Card title={<Space><DatabaseOutlined /> Sử dụng bộ nhớ</Space>}>
                             {(() => {
-                                const currentPlanKey = userData?.status || "FREE";
-                                const currentPlan = plans.find(p => p.key === currentPlanKey) || plans[0];
-                                const storageLimitBytes = currentPlan.storageLimitMb * 1024 * 1024;
+                                // Lấy giới hạn bộ nhớ trực tiếp từ userData.accountTier
+                                const limitMB = userData?.accountTier?.storageLimitMb || 0; // <--- Đã sửa ở đây
+                                const storageLimitBytes = limitMB * 1024 * 1024; // Chuyển đổi giới hạn sang bytes
 
                                 const usedBytes = totalStorageUsedBytes;
                                 const usedMB = parseFloat((usedBytes / (1024 * 1024)).toFixed(2));
-                                const limitMB = currentPlan.storageLimitMb;
-                                const percentUsed = storageLimitBytes > 0 ? Math.min((usedBytes / storageLimitBytes) * 100, 100) : 0;
+
+                                // Tính toán phần trăm sử dụng, đảm bảo không chia cho 0
+                                const percentUsed = limitMB > 0 ? Math.min((usedBytes / storageLimitBytes) * 100, 100) : 0;
+
                                 return (
                                     <>
                                         <Progress
@@ -209,13 +217,14 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                             display: 'flex', justifyContent: 'space-between',
                                             alignItems: 'center', marginBottom: 8
                                         }}>
-                                            <Text strong>{formatStorageFromMB(usedMB)} / {formatStorageFromMB(limitMB)} used</Text>
+                                            {/* HIỂN THỊ GIÁ TRỊ GIỚI HẠN GÓI Ở ĐÂY */}
+                                            <Text strong>{formatStorageFromMB(usedMB)} / {formatStorageFromMB(limitMB)} đã sử dụng</Text>
                                         </div>
                                         <Text
                                             type="secondary"
                                             style={{ fontSize: '12px', display: 'block', marginTop: 4, marginBottom: 16 }}
                                         >
-                                            Current limit for your {currentPlan.title} plan. Upgrade for more storage and features!
+                                            Giới hạn hiện tại cho gói {currentDisplayPlan?.title || 'Miễn phí'} của bạn. Nâng cấp để có thêm bộ nhớ và tính năng!
                                         </Text>
                                         <Button
                                             type="primary"
@@ -224,14 +233,14 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                             block
                                             style={{ backgroundColor: '#f89b29', borderColor: '#f89b29' }}
                                         >
-                                            Upgrade Plan
+                                            Nâng cấp gói
                                         </Button>
                                     </>
                                 );
                             })()}
                         </Card>
 
-                        <Card title={<Space><UserSwitchOutlined /> Account Actions</Space>}>
+                        <Card title={<Space><UserSwitchOutlined /> Hành động tài khoản</Space>}>
                             <Button
                                 type="dashed"
                                 block
@@ -239,27 +248,27 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                 onClick={() => {
                                     closeSettingsPanel();
                                     Swal.fire({
-                                        title: 'Are you sure?',
-                                        text: "You will be logged out!",
+                                        title: 'Bạn có chắc không?',
+                                        text: "Bạn sẽ bị đăng xuất!",
                                         icon: 'warning',
                                         showCancelButton: true,
                                         confirmButtonColor: '#d33',
                                         cancelButtonColor: '#3085d6',
-                                        confirmButtonText: 'Yes, log me out!'
+                                        confirmButtonText: 'Có, đăng xuất!'
                                     }).then((result) => {
                                         if (result.isConfirmed) {
                                             dispatch(logoutUser());
                                             navigate('/login');
-                                            Swal.fire('Logged Out!', 'You have been successfully logged out.', 'success');
+                                            Swal.fire('Đã đăng xuất!', 'Bạn đã đăng xuất thành công.', 'success');
                                         }
                                     })
                                 }}>
-                                Log Out
+                                Đăng xuất
                             </Button>
                         </Card>
                     </Space>
                 ) : (
-                    <Spin tip="Loading account details..." />
+                    <Spin tip="Đang tải chi tiết tài khoản..." />
                 )}
             </Drawer>
 
@@ -267,8 +276,8 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
             <Modal
                 title={
                     <div style={{ textAlign: 'center', marginBottom: 0 }}>
-                        <Title level={3} style={{ margin: 0 }}>Upgrade Your Plan</Title>
-                        <Text type="secondary">Choose the plan that best suits your needs.</Text>
+                        <Title level={3} style={{ margin: 0 }}>Nâng cấp gói của bạn</Title>
+                        <Text type="secondary">Chọn gói phù hợp nhất với nhu cầu của bạn.</Text>
                     </div>
                 }
                 open={isUpgradeModalVisible}
@@ -277,7 +286,7 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                 footer={null}
                 centered
             >
-                <Spin spinning={stripeLoading} tip="Processing...">
+                <Spin spinning={stripeLoading} tip="Đang xử lý...">
                     <div style={{ padding: '24px 0' }}>
                         {stripeError && (
                             <Alert
@@ -295,24 +304,24 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                             style={{ width: '100%' }}
                         >
                             <Row gutter={[16, 16]} justify="center">
-                                {plans.map(plan => (
-                                    <Col key={plan.key} xs={24} sm={12} md={plans.length > 3 ? 6 : (24 / Math.max(1, plans.length))}>
+                                {accountTiers.map(plan => (
+                                    <Col key={plan.name} xs={24} sm={12} md={accountTiers.length > 3 ? 6 : (24 / Math.max(1, accountTiers.length))}>
                                         <Radio.Button
-                                            value={plan.key}
+                                            value={plan.name}
                                             style={{
                                                 display: 'block', height: 'auto', padding: 0,
                                                 border: 0, borderRadius: 8
                                             }}
-                                            disabled={plan.key === "FREE"}
+                                            disabled={plan.name === "FREE"}
                                         >
                                             <Card
-                                                hoverable={plan.key !== "FREE"}
-                                                className={plan.key === "FREE" ? "free-plan-card-disabled" : ""}
+                                                hoverable={plan.name !== "FREE"}
+                                                className={plan.name === "FREE" ? "free-plan-card-disabled" : ""}
                                                 style={{
                                                     textAlign: 'center',
-                                                    border: selectedAccountTier === plan.key ?
+                                                    border: selectedAccountTier === plan.name ?
                                                         `2px solid ${plan.color}` : '1px solid #f0f0f0',
-                                                    boxShadow: selectedAccountTier === plan.key ?
+                                                    boxShadow: selectedAccountTier === plan.name ?
                                                         `0 0 0 3px ${plan.color}40` : 'none',
                                                     borderRadius: 8,
                                                     height: '100%',
@@ -320,8 +329,8 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                                     flexDirection: 'column',
                                                     justifyContent: 'space-between',
                                                     padding: '20px 10px',
-                                                    opacity: plan.key === "FREE" ? 0.7 : 1,
-                                                    cursor: plan.key === "FREE" ? 'not-allowed' : 'pointer',
+                                                    opacity: plan.name === "FREE" ? 0.7 : 1,
+                                                    cursor: plan.name === "FREE" ? 'not-allowed' : 'pointer',
                                                 }}
                                             >
                                                 <div>
@@ -339,7 +348,7 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                                         {formatPrice(plan.priceInCents)}
                                                         {plan.priceInCents > 0 && (
                                                             <Text style={{ fontSize: 14, fontWeight: 'normal' }}>
-                                                                / month
+                                                                / tháng
                                                             </Text>
                                                         )}
                                                     </Title>
@@ -350,18 +359,18 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                                         style={{ minHeight: 60, alignItems: 'center' }}
                                                     >
                                                         <Text strong style={{ fontSize: 16 }}>
-                                                            {formatStorageFromMB(plan.storageLimitMb)} Storage
+                                                            {formatStorageFromMB(plan.storageLimitMb)} Bộ nhớ
                                                         </Text>
-                                                        {plan.key === "FREE" && <Text type="secondary" style={{ fontSize: 12 }}>Basic Features</Text>}
-                                                        {plan.key === "BASIC" && <Text type="secondary" style={{ fontSize: 12 }}>More Features</Text>}
-                                                        {plan.key === "PRO" && <Text type="secondary" style={{ fontSize: 12 }}>Advanced Tools</Text>}
-                                                        {plan.key === "PREMIUM" && <Text type="secondary" style={{ fontSize: 12 }}>All Access</Text>}
+                                                        {plan.name === "FREE" && <Text type="secondary" style={{ fontSize: 12 }}>Tính năng cơ bản</Text>}
+                                                        {plan.name === "BASIC" && <Text type="secondary" style={{ fontSize: 12 }}>Nhiều tính năng hơn</Text>}
+                                                        {plan.name === "PRO" && <Text type="secondary" style={{ fontSize: 12 }}>Công cụ nâng cao</Text>}
+                                                        {plan.name === "PREMIUM" && <Text type="secondary" style={{ fontSize: 12 }}>Truy cập toàn bộ</Text>}
                                                     </Space>
                                                 </div>
-                                                {userData?.status === plan.key && (
+                                                {userData?.status === plan.name && (
                                                     <div style={{ marginTop: '10px' }}>
                                                         <Badge
-                                                            count="Current Plan"
+                                                            count="Gói hiện tại"
                                                             style={{ backgroundColor: plan.color, color: 'white' }}
                                                         />
                                                     </div>
@@ -391,10 +400,10 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                                     borderColor: '#f89b29', fontWeight: 'bold'
                                 }}
                             >
-                                {stripeLoading ? "Processing..." :
-                                    (!selectedAccountTier || selectedAccountTier === "FREE") ? "Select a Paid Plan" :
-                                        (selectedAccountTier === userData?.status) ? "This is your current plan" :
-                                            `Upgrade to ${plans.find(p => p.key === selectedAccountTier)?.title || 'Plan'}`
+                                {stripeLoading ? "Đang xử lý..." :
+                                    (!selectedAccountTier || selectedAccountTier === "FREE") ? "Chọn gói trả phí" :
+                                        (selectedAccountTier === userData?.status) ? "Đây là gói hiện tại của bạn" :
+                                            `Nâng cấp lên ${accountTiers.find(p => p.name === selectedAccountTier)?.title || 'Gói'}`
                                 }
                             </Button>
                         </div>
@@ -402,7 +411,7 @@ export const ActionModalsAndDrawers: React.FC<ActionModalsAndDrawersProps> = ({
                             type="secondary"
                             style={{ display: 'block', textAlign: 'center', marginTop: 16, fontSize: 12 }}
                         >
-                            You'll be redirected to Stripe's secure checkout.
+                            Bạn sẽ được chuyển hướng đến trang thanh toán an toàn của Stripe.
                         </Text>
                     </div>
                 </Spin>

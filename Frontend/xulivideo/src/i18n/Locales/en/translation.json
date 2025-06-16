@@ -1,0 +1,71 @@
+{
+  "auth": {
+    "signInTitle": "Sign in",
+    "createAccountTitle": "Create Account",
+    "orUseEmail": "or use your email account",
+    "form": {
+      "username": {
+        "placeholder": "User name"
+      },
+      "email": {
+        "placeholder": "Email"
+      },
+      "password": {
+        "placeholder": "Password"
+      },
+      "repassword": {
+        "placeholder": "Repassword"
+      }
+    },
+    "forgotPassword": "Forgot your password?",
+    "signInButton": "SIGN IN",
+    "signUpButton": "SIGN UP",
+    "overlay": {
+      "welcomeBackTitle": "Welcome Back!",
+      "welcomeBackParagraph": "To keep connected with us please login with your personal info",
+      "signInButton": "Sign In",
+      "helloFriendTitle": "Hello, Friend!",
+      "helloFriendParagraph": "Enter your personal details and start journey with us",
+      "signUpButton": "Sign Up"
+    },
+    "validation": {
+      "requiredEmail": "Please input your Email!",
+      "invalidEmailFormat": "Please enter a valid Email!",
+      "requiredPassword": "Please input your Password!",
+      "requiredUsername": "Please input your Username!",
+      "usernameMinLength": "Username must be at least {{min}} characters.",
+      "usernameMaxLength": "Username must be at most {{max}} characters.",
+      "passwordMinLength": "Password must be at least {{min}} characters.",
+      "requiredRepassword": "Please confirm your Password!",
+      "passwordsMatch": "The two passwords that you entered do not match!"
+    },
+    "alert": {
+      "okButton": "OK",
+      "registrationSuccessTitle": "Registration Successful!",
+      "registrationSuccessText": "Your account has been created. Please sign in.",
+      "registrationStatusTitle": "Registration Status",
+      "registrationStatusText": "Registration processed with status: {{status}}.",
+      "unexpectedError": "An unexpected error occurred during {{action}}.",
+      "serverResponseStatus": "Server responded with status: {{status}}.",
+      "noServerResponse": "No response received from server. Is the server running and accessible?",
+      "unknownError": "An unknown error occurred: {{message}}",
+      "registrationFailedTitle": "Registration Failed!",
+      "loginSuccessTitle": "Login Successful!",
+      "redirecting": "Redirecting...",
+      "loginStatusTitle": "Login Status",
+      "loginStatusText": "Login processed with status: {{status}}, but token was not received.",
+      "loginFailedTitle": "Login Failed!",
+      "invalidCredentials": "Invalid email or password.",
+      "oauthSuccess": "You have been logged in via Google.",
+      "oauthFailedTitle": "Login Failed",
+      "oauthFailedText": "No access token, user ID, or role received from Google login.",
+      "popupBlockedTitle": "Popup Blocked!",
+      "popupBlockedText": "Please allow popups for this site to continue with Google login."
+    },
+    "invalidSession": "Invalid login session. Please log in again.",
+    "sessionExpired": "Login session expired. Please log in again.",
+    "permissionsLoadFailed": "Could not load user permissions.",
+    "connectionError": "Connection error while loading permissions: {{message}}",
+    "logoutSuccess": "Logged out successfully!"
+  }
+}

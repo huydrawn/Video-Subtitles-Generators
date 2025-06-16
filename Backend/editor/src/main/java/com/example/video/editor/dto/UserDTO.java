@@ -16,4 +16,5 @@ public class UserDTO {
 	private String status;
 	private WorkspaceDto workspace;
 	private AccountTierDTO accountTier;
+	private String roleName;
 }

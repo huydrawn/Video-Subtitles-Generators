@@ -1,16 +1,13 @@
 // src/features/user/userSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import apiService from '../Services/apiService'; // Adjust path if necessary
-import { UserDTO, Project, Workspace } from '../Components/HomePage'; // Adjust path and import necessary types
-// Swal and NavigateFunction are not directly used in the slice but might be in components calling these thunks
-// import Swal from 'sweetalert2';
-// import { NavigateFunction } from 'react-router-dom';
+import { UserDTO, Project, Workspace } from '../Components/HomePage/utils'; // Adjust path and import necessary types
 
 // Define the state structure for this slice
 interface UserState {
     userData: UserDTO | null;
     projects: Project[];
-    isLoading: boolean; // For initial data fetch
+    isLoading: boolean; // For initial data fetch and general user data updates (including tier)
     isSubmitting: boolean; // For create project specifically
     isProjectActionLoading: boolean; // For rename/delete project actions
     error: string | null;
@@ -78,7 +75,6 @@ export const createProject = createAsyncThunk<
             const response = await apiService.post<Project>(apiUrl, { projectName, description });
             return response.data;
         } catch (err: any) {
-            // ... (error handling as before)
             let errorMessage = "Failed to create project.";
             if (err.response) {
                 if (err.response.status === 401 || err.response.status === 403) {
@@ -168,7 +164,6 @@ export const deleteProject = createAsyncThunk<
             // The backend expects a RenameRequest DTO even for delete, which is unusual.
             // We send a dummy body. If your apiService.delete is axios.delete(url, { data: body }), use that.
             // Otherwise, if it's apiService.delete(url, body), this should work.
-            // Let's assume apiService.delete can take a body. If not, this needs adjustment.
             // Based on the Java controller: @RequestBody RenameRequest request
             // We must send a body.
             await apiService.delete(apiUrl, { data: { newName: "" } });
@@ -188,6 +183,40 @@ export const deleteProject = createAsyncThunk<
                 errorMessage = "Network error. Is the backend running?";
             } else {
                 errorMessage = `Unexpected error: ${err.message}`;
+            }
+            return rejectWithValue(errorMessage);
+        }
+    }
+);
+
+// UPDATED: Thunk for updating account tier using @PutMapping("/account-tier")
+// This thunk will be called from PaymentSuccessPage.
+export const updateAccountTier = createAsyncThunk<
+    string, // Backend returns the tier name (e.g., "BASIC") as string
+    { newTierName: string }, // Argument: The name of the new tier (e.g., "BASIC", "PRO")
+    { rejectValue: string }
+>(
+    'user/updateAccountTier',
+    async ({ newTierName }, { rejectWithValue }) => {
+        try {
+            // Call the @PutMapping("/account-tier") API with tier as a query parameter
+            const response = await apiService.put<string>(`users/account-tier?tier=${newTierName}`);
+            return response.data; // Expected: "BASIC", "PRO", etc.
+        } catch (err: any) {
+            let errorMessage = "Failed to update account tier.";
+            if (err.response) {
+                if (err.response.status === 401 || err.response.status === 403) {
+                    errorMessage = "Your session has expired or you are unauthorized. Please log in again.";
+                    localStorage.removeItem('accessToken');
+                } else if (err.response.data && err.response.data.message) {
+                    errorMessage = err.response.data.message;
+                } else {
+                    errorMessage = `Server error: ${err.response.status}`;
+                }
+            } else if (err.request) {
+                errorMessage = "Network error: No response from server.";
+            } else {
+                errorMessage = `An unexpected error occurred: ${err.message}`;
             }
             return rejectWithValue(errorMessage);
         }
@@ -289,6 +318,29 @@ const userSlice = createSlice({
             .addCase(deleteProject.rejected, (state, action) => {
                 state.isProjectActionLoading = false;
                 state.error = action.payload || 'Failed to delete project';
+            })
+            // UPDATED: Update Account Tier
+            .addCase(updateAccountTier.pending, (state) => {
+                state.isLoading = true; // Using general isLoading for user data updates
+                state.error = null;
+            })
+            .addCase(updateAccountTier.fulfilled, (state, action: PayloadAction<string>) => {
+                state.isLoading = false;
+                // Since the backend returns only the tier name string,
+                // we optimistically update the status here.
+                // The full `userData.accountTier` object will be updated
+                // when `fetchUserData` is called successfully after this.
+                if (state.userData) {
+                    state.userData.status = action.payload; // Update user's status with the new tier name
+                }
+            })
+            .addCase(updateAccountTier.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload || 'Failed to update account tier';
+                if (action.payload?.includes("session has expired") || action.payload?.includes("Unauthorized")) {
+                    state.userData = null;
+                    state.projects = [];
+                }
             });
     },
 });

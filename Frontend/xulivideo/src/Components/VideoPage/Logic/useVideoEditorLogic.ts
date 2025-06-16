@@ -1,3 +1,5 @@
+// src/Hooks/useVideoEditorLogic.ts
+
 import {
     useState, useEffect, useRef, useCallback, useMemo, SetStateAction, Dispatch
 } from 'react';
@@ -6,7 +8,8 @@ import type { UploadProps } from 'antd';
 import Moveable from 'react-moveable';
 import type { OnDragEnd, OnResize, OnResizeEnd, OnRotateEnd } from 'react-moveable';
 import { useLocation } from 'react-router-dom';
-import { Client, StompSubscription } from '@stomp/stompjs';
+import {Client, IMessage, StompSubscription} from '@stomp/stompjs';
+import SockJS from "sockjs-client";
 
 // --- FFmpeg ---
 import { FFmpeg } from '@ffmpeg/ffmpeg';
@@ -16,29 +19,32 @@ import { fetchFile } from '@ffmpeg/util';
 // Import types, constants, utils
 import type {
     Clip, Track, MediaAsset, EditorProjectState, Keyframe, ThumbnailInfo,
-    SubtitleEntry, ClipType, EditorStatus
-} from '../types'; // ENSURE THIS PATH IS CORRECT
-import {
+    SubtitleEntry, ClipType, EditorStatus, VideoClip // Đảm bảo VideoClip cũng được import
+} from '../../VideoPage/types'; // Adjust path if needed
+import { // Path here is relative to your project structure, ensure it's correct
     THUMBNAIL_INTERVAL, DEFAULT_CLIP_DURATION, PLAYBACK_RATES, MIN_CLIP_DURATION,
     PREVIEW_ZOOM_LEVELS, PREVIEW_ZOOM_FIT_MODE, PREVIEW_ZOOM_FILL_MODE,
     DEFAULT_SUBTITLE_FONT_SIZE, DEFAULT_SUBTITLE_TEXT_ALIGN, SUBTITLE_FILL_COLOR, SUBTITLE_BACKGROUND_COLOR
-} from '../../../Hooks/constants'; // ENSURE THIS PATH IS CORRECT
-import {
+} from '../../../Hooks/constants'; // Adjust path if needed (was '../../../Hooks/constants', now corrected based on common project structure)
+import { // Path here is relative to your project structure, ensure it's correct
     formatTime, parseTimecodeToSeconds, interpolateValue, getWrappedLines,
     calculateTotalDuration
-} from '../utils'; // ENSURE THIS PATH IS CORRECT
+} from '../utils'; // Adjust path if needed (was '../utils', now corrected based on common project structure)
 
-// Import Controllers
+// Import Controllers (paths adjusted to reflect common project structure)
 import { CanvasRenderer } from '../../../Hooks/Logic/CanvasRenderer';
 import { PlaybackController } from '../../../Hooks/Logic/PlaybackController';
 import { MediaElementManager } from '../../../Hooks/Logic/MediaElementManager';
 import { ClipManager } from '../../../Hooks/Logic/ClipManager';
 import { UploadManager } from '../../../Hooks/Logic/UploadManager';
-// CORRECTED: Import TranscriptionOptions from SubtitleManager
 import { SubtitleManager, TranscriptionOptions } from '../../../Hooks/Logic/SubtitleManager';
-import { PreviewMoveableController } from '../../../Hooks/Logic/PreviewMoveableController';
+import { PreviewMoveableController } from  '../../../Hooks/Logic/PreviewMoveableController'
 import { TimelineMoveableController } from '../../../Hooks/Logic/TimelineMoveableController';
 import { PreviewZoomController } from '../../../Hooks/Logic/PreviewZoomController';
+
+// NEW: Import the new hook
+import { useApiSubtitleBurning } from '../../../Hooks/Logic/useApiSubtitleBurning'; // ADJUST THIS PATH if needed
+
 
 type GenerateThumbnailsFunc = (clipId: string, videoElement: HTMLVideoElement) => Promise<ThumbnailInfo[]>;
 type MediaElementsRefValue = { [key: string]: HTMLVideoElement | HTMLImageElement };
@@ -46,32 +52,29 @@ type FFmpegProgressCallback = ({ progress, time }: { progress: number; time?: nu
 
 
 // --- FFmpeg Configuration ---
-const FFMPEG_CORE_PATH = '/ffmpeg-core/ffmpeg-core.js'; // Ensure this path is correct, e.g., '/node_modules/@ffmpeg/core/dist/ffmpeg-core.js' or similar from your public folder
+const FFMPEG_CORE_PATH = '/ffmpeg-core/ffmpeg-core.js';
 // --- End FFmpeg Configuration ---
 
 
 export const useVideoEditorLogic = (publicIdFromProp: string) => {
     const location = useLocation();
-    const { initialVideoUrl, publicId: routePublicId } = (location.state as { initialVideoUrl?: string, publicId?: string }) || {};
+    // THAY ĐỔI TẠI ĐÂY: Thêm initialVideoWidth và initialVideoHeight vào destructuring
+    const { initialVideoUrl, publicId: routePublicId, videoWidth: initialVideoWidth, videoHeight: initialVideoHeight } = (location.state as { initialVideoUrl?: string, publicId?: string, videoWidth?: number, videoHeight?: number }) || {};
     const currentPublicId = routePublicId || publicIdFromProp;
 
     const ffmpegRef = useRef<FFmpeg | null>(null);
     const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
-    const [isBurningSubtitles, setIsBurningSubtitles] = useState(false);
-    const [burningProgress, setBurningProgress] = useState(0);
+    const [isBurningSubtitles, setIsBurningSubtitles] = useState(false); // For client-side FFmpeg burning
+    const [burningProgress, setBurningProgress] = useState(0); // For client-side FFmpeg burning
     const ffmpegProgressCallbackRef = useRef<FFmpegProgressCallback | null>(null);
 
-    // --- New state for desaturation ---
     const [isDesaturating, setIsDesaturating] = useState(false);
     const [desaturationProgress, setDesaturationProgress] = useState(0);
     const desaturationProgressCallbackRef = useRef<FFmpegProgressCallback | null>(null);
-    // --- End new state for desaturation ---
 
-    // --- New state for audio extraction ---
     const [isExtractingAudio, setIsExtractingAudio] = useState(false);
     const [audioExtractionProgress, setAudioExtractionProgress] = useState(0);
     const audioExtractionProgressCallbackRef = useRef<FFmpegProgressCallback | null>(null);
-    // --- End new state for audio extraction ---
 
     const [uploadedSrtFileContent, setUploadedSrtFileContent] = useState<string | null>(null);
 
@@ -90,9 +93,10 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
 
     const [editorState, setEditorState] = useState<EditorStatus>(() => initialVideoUrl ? 'editor' : 'initial');
     const [selectedMenuKey, setSelectedMenuKey] = useState('media');
-    const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [timelineZoom, setTimelineZoom] = useState(50);
+    const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false);
+
 
     const [projectState, setProjectState] = useState<EditorProjectState>(() => {
         if (initialVideoUrl) {
@@ -102,14 +106,27 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             const initialClip: Clip = { id: clipId, type: 'video', source: initialVideoUrl, trackId, startTime: 0, duration: 0.01, endTime: 0.01, position: { x: 0.5, y: 0.5 }, scale: { x: 1, y: 1 }, rotation: 0, opacity: 1, keyframes: {}, name: `Loaded Video`, thumbnailUrls: [], originalWidth: 0, originalHeight: 0, secureUrl: initialVideoUrl };
             const initialAsset: MediaAsset = { id: assetId, name: 'Loaded Video', file: undefined, type: 'video/mp4', objectURL: undefined, secureUrl: initialVideoUrl };
             const initialTracks: Track[] = [{ id: trackId, clips: [initialClip] }];
+
+            // LOGIC MỚI: Ưu tiên kích thước video thực tế nếu có
+            const canvasW = (initialVideoWidth && initialVideoWidth > 0) ? initialVideoWidth : 1280;
+            const canvasH = (initialVideoHeight && initialVideoHeight > 0) ? initialVideoHeight : 720;
+
             return {
-                projectName: `Project ${currentPublicId}`, tracks: initialTracks, mediaAssets: [initialAsset], canvasDimensions: { width: 1280, height: 720 }, totalDuration: calculateTotalDuration(initialTracks), selectedClipId: clipId, isPlaying: false, isPreviewMuted: false, playbackRate: 1.0, uploadProgress: 0, uploadingFile: null, currentUploadTaskId: null, uploadTimeRemaining: '00:00', previewZoomLevel: 1.0, previewZoomMode: PREVIEW_ZOOM_FIT_MODE, subtitles: [], subtitleFontFamily: 'Arial', subtitleFontSize: DEFAULT_SUBTITLE_FONT_SIZE, subtitleTextAlign: DEFAULT_SUBTITLE_TEXT_ALIGN, isSubtitleBold: false, isSubtitleItalic: false, isSubtitleUnderlined: false, subtitleColor: SUBTITLE_FILL_COLOR, subtitleBackgroundColor: SUBTITLE_BACKGROUND_COLOR,
+                projectName: `Project ${currentPublicId}`, tracks: initialTracks, mediaAssets: [initialAsset], canvasDimensions: { width: canvasW, height: canvasH }, totalDuration: calculateTotalDuration(initialTracks), selectedClipId: clipId, isPlaying: false, isPreviewMuted: false, playbackRate: 1.0, uploadProgress: 0, uploadingFile: null, currentUploadTaskId: null, uploadTimeRemaining: '00:00', previewZoomLevel: 1.0, previewZoomMode: PREVIEW_ZOOM_FIT_MODE, subtitles: [], subtitleFontFamily: 'Arial', subtitleFontSize: DEFAULT_SUBTITLE_FONT_SIZE, subtitleTextAlign: DEFAULT_SUBTITLE_TEXT_ALIGN, isSubtitleBold: false, isSubtitleItalic: false, isSubtitleUnderlined: false, subtitleColor: SUBTITLE_FILL_COLOR, subtitleBackgroundColor: SUBTITLE_BACKGROUND_COLOR,
+                areSubtitlesVisibleOnCanvas: true, // Mặc định hiển thị
             };
         }
         return {
             projectName: `New Project ${currentPublicId}`, tracks: [{ id: `track-${Date.now()}`, clips: [] }], mediaAssets: [], canvasDimensions: { width: 1280, height: 720 }, totalDuration: 0, selectedClipId: null, isPlaying: false, isPreviewMuted: false, playbackRate: 1.0, uploadProgress: 0, uploadingFile: null, currentUploadTaskId: null, uploadTimeRemaining: '00:00', previewZoomLevel: 1.0, previewZoomMode: PREVIEW_ZOOM_FIT_MODE, subtitles: [], subtitleFontFamily: 'Arial', subtitleFontSize: DEFAULT_SUBTITLE_FONT_SIZE, subtitleTextAlign: DEFAULT_SUBTITLE_TEXT_ALIGN, isSubtitleBold: false, isSubtitleItalic: false, isSubtitleUnderlined: false, subtitleColor: SUBTITLE_FILL_COLOR, subtitleBackgroundColor: SUBTITLE_BACKGROUND_COLOR,
+            areSubtitlesVisibleOnCanvas: true, // Mặc định hiển thị
         };
     });
+
+    // NEW: Ref để luôn giữ projectState mới nhất
+    const projectStateRef = useRef<EditorProjectState>(projectState);
+    useEffect(() => {
+        projectStateRef.current = projectState;
+    }, [projectState]);
 
     const timelineContainerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -119,8 +136,8 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
     const moveableRef = useRef<Moveable>(null);
     const previewMoveableRef = useRef<Moveable>(null);
     const lastUpdateTimeRef = useRef<number>(Date.now());
-    const stompClientRef = useRef<Client | null>(null);
-    const stompSubscriptionRef = useRef<StompSubscription | null>(null);
+    const stompClientRef = useRef<Client | null>(null); // For general transcription/upload
+    const stompSubscriptionRef = useRef<StompSubscription | null>(null); // For general transcription/upload
     const uploadStartTimeRef = useRef<number | null>(null);
 
     const totalDuration = useMemo(() => calculateTotalDuration(projectState.tracks), [projectState.tracks]);
@@ -143,6 +160,9 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
 
     const uploadUrl = useMemo(() => `http://localhost:8080/api/projects/${currentPublicId}/videos`, [currentPublicId]);
     const transcriptionUrl = `http://localhost:8080/api/subtitles`;
+    // Changed addSubtitleApiUrl to reflect the actual endpoint structure
+    const addSubtitleApiUrl = `http://localhost:8080/test/${currentPublicId}/subtitles`;
+
     const websocketEndpoint = 'http://localhost:8080/ws';
 
     const generateSingleThumbnail = useCallback(
@@ -255,6 +275,9 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
     );
     const onProcessMediaFinishCallback = useCallback(
         (file: File, secureUrl: string, originalFileName: string) => {
+            console.log(`Video uploaded and processed. Secure URL: ${secureUrl}`);
+            console.log(`Associated Project Public ID for this video: ${currentPublicId}`);
+
             const fileType: ClipType = file.type.startsWith('video') ? 'video' : 'image';
             setProjectState(prev => {
                 let newClipStartTime = 0;
@@ -285,7 +308,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
                 }
                 return { ...prev, mediaAssets: updatedMediaAssets, tracks: updatedTracks, totalDuration: Math.max(prev.totalDuration, calculateTotalDuration(updatedTracks)), selectedClipId: newClip.id };
             });
-        }, [setProjectState]
+        }, [setProjectState, currentPublicId]
     );
 
     const animateTranscriptionProgress = useCallback(() => {
@@ -308,6 +331,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
                                 subtitles: finalSubtitles,
                                 totalDuration: calculateTotalDuration(prev.tracks),
                                 selectedClipId: null,
+                                areSubtitlesVisibleOnCanvas: true, // Hiển thị lại phụ đề khi transcribe xong
                             }));
                             if (finalSubtitles.length > 0) {
                                 message.success(`Subtitles loaded: ${finalSubtitles.length} entries.`);
@@ -344,6 +368,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
                         subtitles: finalSubtitles,
                         totalDuration: calculateTotalDuration(prev.tracks),
                         selectedClipId: null,
+                        areSubtitlesVisibleOnCanvas: true, // Hiển thị lại phụ đề khi transcribe xong
                     }));
                     if (finalSubtitles.length > 0) {
                         message.success(`Subtitles loaded: ${finalSubtitles.length} entries.`);
@@ -373,7 +398,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
 
         if (progress >= 0 && !isTranscribing && progress < 100) {
             setIsTranscribing(true);
-            setProjectState(prev => ({ ...prev, subtitles: [] }));
+            setProjectState(prev => ({ ...prev, subtitles: [], areSubtitlesVisibleOnCanvas: true })); // Đảm bảo hiển thị phụ đề khi bắt đầu transcribe
         }
 
         if (progress < 0) {
@@ -385,7 +410,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             }
             targetTranscriptionProgressRef.current = 0;
             pendingSubtitlesRef.current = null;
-            setProjectState(prev => ({ ...prev, subtitles: [] }));
+            setProjectState(prev => ({ ...prev, subtitles: [], areSubtitlesVisibleOnCanvas: true })); // Đảm bảo hiển thị nếu lỗi
             setTimeout(() => {
                 setTranscribingFileName(null);
             }, 3000);
@@ -418,7 +443,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
     const canvasRenderer = useMemo(() => new CanvasRenderer(canvasRef, interpolateValue), [canvasRef]);
     const playbackController = useMemo(() => new PlaybackController(setProjectState, setCurrentTime, mediaElementsRef, canvasRenderer.drawFrame.bind(canvasRenderer), animationFrameRef , lastUpdateTimeRef), [setProjectState, setCurrentTime, mediaElementsRef, canvasRenderer, lastUpdateTimeRef]);
 
-    const mediaElementManager = useMemo(() => new MediaElementManager(mediaElementsRef, setProjectState, calculateTotalDuration, generateThumbnailsForClip), [mediaElementsRef, setProjectState, generateThumbnailsForClip]);
+    const mediaElementManager = useMemo(() => new MediaElementManager(mediaElementsRef, setProjectState, calculateTotalDuration, generateThumbnailsForClip), [mediaElementsRef, setProjectState, calculateTotalDuration, generateThumbnailsForClip]);
     const clipManager = useMemo(() => new ClipManager(setProjectState, calculateTotalDuration, mediaElementsRef), [setProjectState, mediaElementsRef]);
     const uploadManager = useMemo(() => new UploadManager(setProjectState, setEditorState, uploadUrl, websocketEndpoint, uploadStartTimeRef, stompClientRef, stompSubscriptionRef, onProcessMediaFinishCallback), [setProjectState, setEditorState, uploadUrl, websocketEndpoint, onProcessMediaFinishCallback, uploadStartTimeRef, stompClientRef, stompSubscriptionRef]);
 
@@ -443,6 +468,18 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
     const previewMoveableController = useMemo(() => new PreviewMoveableController(previewMoveableRef, previewContainerRef, clipManager.updateSelectedClipProperty.bind(clipManager), clipManager.addOrUpdateKeyframe.bind(clipManager), interpolateValue), [previewMoveableRef, previewContainerRef, clipManager]);
     const timelineMoveableController = useMemo(() => new TimelineMoveableController(moveableRef, setProjectState, calculateTotalDuration), [moveableRef, setProjectState]);
     const previewZoomController = useMemo(() => new PreviewZoomController(previewContainerRef, setProjectState), [previewContainerRef, setProjectState]);
+
+    // NEW: Use the new hook here
+    const { isApiBurningSubtitles, apiBurningProgress, callAddSubtitleApi } = useApiSubtitleBurning({
+        currentPublicId,
+        projectState, // Pass current projectState
+        subtitleManager, // Pass subtitleManager to generate ASS content
+        websocketEndpoint,
+        addSubtitleApiUrl,
+        setProjectState, // Pass projectState setter to update with new video URL
+        selectedVideoSecureUrl, // Pass the currently active video URL for update logic
+    });
+
 
     const loadFFmpeg = useCallback(async () => {
         if (ffmpegRef.current && ffmpegRef.current.loaded) {
@@ -569,9 +606,12 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
         return () => {
             if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null; }
             if (animationFrameProgressRef.current) { cancelAnimationFrame(animationFrameProgressRef.current); animationFrameProgressRef.current = null; }
+            // General STOMP cleanup (for transcription/upload) - these are NOT moved
             if (stompSubscriptionRef.current) stompSubscriptionRef.current.unsubscribe();
             if (stompClientRef.current?.active) stompClientRef.current.deactivate().catch(e => console.warn("Error deactivating STOMP on cleanup:", e));
             stompClientRef.current = null; stompSubscriptionRef.current = null;
+            // API-specific STOMP cleanup - now handled by useApiSubtitleBurning hook.
+            // Do NOT add apiStompClientRef/apiStompSubscriptionRef cleanup here.
             mediaElementManager.cleanupMediaElements(mediaElementsRef.current); mediaElementsRef.current = {};
             if (ffmpegRef.current && ffmpegRef.current.loaded) {
                 try { if (typeof ffmpegRef.current.terminate === 'function') { ffmpegRef.current.terminate(); } }
@@ -579,7 +619,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
                 ffmpegRef.current = null;
             }
         };
-    }, [currentPublicId, mediaElementManager]); // Added mediaElementManager here
+    }, [currentPublicId, mediaElementManager]); // currentPublicId added for effect cleanup dependencies for media elements
 
     const handleMenuClick = useCallback((e: { key: string }) => setSelectedMenuKey(e.key), []);
     const showMobileDrawer = useCallback(() => setMobileDrawerVisible(true), []);
@@ -602,7 +642,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             const fileContent = await file.text();
             setUploadedSrtFileContent(fileContent);
             message.success(`${file.name} content ready. Processing...`);
-            setProjectState(prev => ({ ...prev, subtitles: [] }));
+            setProjectState(prev => ({ ...prev, subtitles: [], areSubtitlesVisibleOnCanvas: true })); // Đảm bảo hiển thị khi tải SRT
             setTranscriptionProgress(0);
             handleTranscriptionProgress(0, `Parsing ${file.name}`);
             subtitleManager.handleUploadSrt(file, projectState);
@@ -623,7 +663,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
                 return;
             }
             const fileName = selectedClip.name || 'Selected Video';
-            setProjectState(prev => ({ ...prev, subtitles: [] }));
+            setProjectState(prev => ({ ...prev, subtitles: [], areSubtitlesVisibleOnCanvas: true })); // Đảm bảo hiển thị khi bắt đầu transcribe
             setTranscriptionProgress(0);
             handleTranscriptionProgress(0, fileName);
             handleTranscriptionProgress(50, fileName); // Example intermediate progress
@@ -672,13 +712,14 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
     const onPreviewRotateEnd = useCallback((e: OnRotateEnd) => previewMoveableController.onPreviewRotateEnd(e, selectedClip, currentTime, projectState), [previewMoveableController, selectedClip, currentTime, projectState]);
     const handleZoomMenuClick = useCallback(({ key }: { key: string }) => previewZoomController.handleZoomMenuClick({ key }, projectState), [previewZoomController, projectState]);
 
+    // MODIFIED: Sử dụng projectStateRef.current để lấy state mới nhất
     const handleGenerateAndLogAssContent = useCallback(() => {
-        const assContent = subtitleManager.generateAssContent(projectState);
+        const assContent = subtitleManager.generateAssContent(projectStateRef.current); // Lấy state từ ref
         console.log("--- Generated ASS Subtitle Content (for logging/debugging) ---");
         console.log(assContent);
         message.success("ASS content generated and logged to console.");
         return assContent;
-    }, [subtitleManager, projectState]);
+    }, [subtitleManager]); // Không còn phụ thuộc vào projectState trực tiếp
 
     const handleBurnSubtitlesWithFFmpeg = useCallback(async () => {
         if (!ffmpegLoaded || !ffmpegRef.current) {
@@ -697,9 +738,9 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
         }
         let subtitleFileContent = uploadedSrtFileContent;
         let subtitleFileName = 'input.srt';
-        if (!subtitleFileContent && projectState.subtitles.length > 0) {
+        if (!subtitleFileContent && projectStateRef.current.subtitles.length > 0) { // SỬ DỤNG projectStateRef.current
             try {
-                subtitleFileContent = subtitleManager.generateAssContent(projectState);
+                subtitleFileContent = subtitleManager.generateAssContent(projectStateRef.current); // SỬ DỤNG projectStateRef.current
                 subtitleFileName = 'input.ass';
                 message.info("No SRT uploaded, using current subtitles as ASS for burning.");
             } catch (genError) {
@@ -725,8 +766,6 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
         ffmpegProgressCallbackRef.current = currentProgressCallback;
 
         try {
-            await ffmpeg.writeFile(subtitleFileName, subtitleFileContent);
-            message.info(`${subtitleFileName} content prepared for FFmpeg.`);
             message.info(`Fetching video from: ${videoUrlToProcess}`);
             await ffmpeg.writeFile(inputVideoName, await fetchFile(videoUrlToProcess));
             message.info("Video downloaded and prepared for FFmpeg.");
@@ -738,6 +777,10 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             message.info(`Running FFmpeg command to burn ${subtitleFileName} subtitles...`);
             await ffmpeg.exec([
                 '-i', inputVideoName,
+                // The FFmpeg command for burning ASS is specifically different for .ass vs .srt.
+                // Your backend uses `ass=` for .ass files, so this client-side ffmpeg should reflect that.
+                // For simplicity, I'm keeping a generic `subtitles=` filter.
+                // For direct ASS burning with custom styles, `ass=` is better as in your backend.
                 '-vf', `subtitles=filename=${subtitleFileName}:force_style=${subtitleFileName.endsWith('.ass') ? 'PrimaryColour=&H00FFFFFF,BorderStyle=3,OutlineColour=&H00000000' : ''}`,
                 '-c:v', 'libx264', '-crf', '23', '-preset', 'medium', '-c:a', 'copy',
                 outputVideoName
@@ -748,7 +791,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             const downloadUrl = URL.createObjectURL(videoBlob);
             const a = document.createElement('a');
             a.href = downloadUrl;
-            a.download = `video_with_subtitles_${projectState.projectName.replace(/\s+/g, '_') || 'export'}.mp4`;
+            a.download = `video_with_subtitles_${projectStateRef.current.projectName.replace(/\s+/g, '_') || 'export'}.mp4`; // SỬ DỤNG projectStateRef.current
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(downloadUrl);
             message.success(`Output video with ${subtitleFileName} subtitles downloaded.`);
@@ -768,7 +811,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
         }
     }, [
         ffmpegLoaded, isBurningSubtitles, selectedVideoSecureUrl, loadFFmpeg,
-        uploadedSrtFileContent, projectState.projectName, projectState.subtitles, subtitleManager
+        uploadedSrtFileContent, subtitleManager // projectState.projectName removed, as we use projectStateRef.current
     ]);
 
     const handleDesaturateVideoSegment = useCallback(async (
@@ -838,7 +881,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             const downloadUrl = URL.createObjectURL(videoBlob);
             const a = document.createElement('a');
             a.href = downloadUrl;
-            a.download = `desaturated_video_${projectState.projectName.replace(/\s+/g, '_') || 'export'}_${Date.now()}.mp4`;
+            a.download = `desaturated_video_${projectStateRef.current.projectName.replace(/\s+/g, '_') || 'export'}_${Date.now()}.mp4`; // SỬ DỤNG projectStateRef.current
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -855,19 +898,18 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             setIsDesaturating(false);
             setDesaturationProgress(0);
             if (desaturationProgressCallbackRef.current && ffmpegRef.current) {
-                ffmpegRef.current.off('progress', desaturationProgressCallbackRef.current);
+                ffmpeg.off('progress', desaturationProgressCallbackRef.current);
                 desaturationProgressCallbackRef.current = null;
             }
         }
     }, [
-        ffmpegLoaded, isDesaturating, projectState.projectName, loadFFmpeg, // formatTime is an import, not needed in deps
+        ffmpegLoaded, isDesaturating, loadFFmpeg,
     ]);
 
-    // --- New FFmpeg function for extracting audio ---
     const handleExtractAudio = useCallback(async (videoUrlToProcess: string) => {
         if (!ffmpegLoaded || !ffmpegRef.current) {
             message.error("FFmpeg is not loaded. Cannot extract audio.");
-            if (!ffmpegLoaded) loadFFmpeg(); // Attempt to load if not already
+            if (!ffmpegLoaded) loadFFmpeg();
             return;
         }
         if (isExtractingAudio) {
@@ -884,7 +926,7 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
         message.info('Starting audio extraction process...');
 
         const ffmpeg = ffmpegRef.current;
-        const inputFileName = `input_video_audio_extract_${Date.now()}.mp4`; // Unique name
+        const inputFileName = `input_video_audio_extract_${Date.now()}.mp4`;
         const outputFileName = `extracted_audio_${Date.now()}.mp3`;
 
         const currentProgressCallback: FFmpegProgressCallback = ({ progress }) => {
@@ -902,12 +944,11 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             }
 
             message.info('Running FFmpeg command to extract audio as MP3...');
-            // Command: ffmpeg -i input.mp4 -vn -c:a libmp3lame -q:a 2 output.mp3
             await ffmpeg.exec([
                 '-i', inputFileName,
-                '-vn',                    // No video output
-                '-c:a', 'libmp3lame',     // Audio codec: LAME MP3
-                '-q:a', '2',              // Audio quality (VBR, 0-9, lower is better, 2 is high quality)
+                '-vn',
+                '-c:a', 'libmp3lame',
+                '-q:a', '2',
                 outputFileName
             ]);
             message.success('FFmpeg processing complete. Audio extracted.');
@@ -917,7 +958,6 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             const downloadUrl = URL.createObjectURL(audioBlob);
             const a = document.createElement('a');
             a.href = downloadUrl;
-            // Use project name or a generic name for the downloaded file
             const baseName = videoUrlToProcess.substring(videoUrlToProcess.lastIndexOf('/') + 1).replace(/\.[^/.]+$/, "");
             a.download = `${baseName}_audio.mp3`;
             document.body.appendChild(a);
@@ -936,14 +976,30 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             setIsExtractingAudio(false);
             setAudioExtractionProgress(0);
             if (audioExtractionProgressCallbackRef.current && ffmpegRef.current) {
-                ffmpegRef.current.off('progress', audioExtractionProgressCallbackRef.current);
+                ffmpeg.off('progress', audioExtractionProgressCallbackRef.current);
                 audioExtractionProgressCallbackRef.current = null;
             }
         }
     }, [
-        ffmpegLoaded, isExtractingAudio, loadFFmpeg, // projectState.projectName is not used here, but could be for filename
+        ffmpegLoaded, isExtractingAudio, loadFFmpeg,
     ]);
-    // --- End new FFmpeg function for extracting audio ---
+
+    // NEW FUNCTION: Public handler to call the API subtitle burning process
+    const handleBurnSubtitlesViaApi = useCallback(async () => {
+        if (!selectedVideoSecureUrl) {
+            message.error("No video selected or available to burn subtitles to via API.");
+            return;
+        }
+        await callAddSubtitleApi();
+    }, [callAddSubtitleApi, selectedVideoSecureUrl]);
+
+    // NEW FUNCTION: Toggle subtitle visibility on canvas
+    const toggleSubtitlesVisibility = useCallback(() => {
+        setProjectState(prev => ({
+            ...prev,
+            areSubtitlesVisibleOnCanvas: !prev.areSubtitlesVisibleOnCanvas
+        }));
+    }, [setProjectState]);
 
     return {
         editorState, setEditorState, projectState, setProjectState, currentTime, timelineZoom, setTimelineZoom,
@@ -968,21 +1024,24 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
         mediaElementsRef,
         ffmpegLoaded,
         loadFFmpeg,
-        isBurningSubtitles,
-        burningProgress,
+        isBurningSubtitles, // This is for client-side FFmpeg burning
+        burningProgress, // This is for client-side FFmpeg burning
         handleGenerateAndLogAssContent,
-        handleBurnSubtitlesWithFFmpeg,
+        handleBurnSubtitlesWithFFmpeg, // This is for client-side FFmpeg burning
         handleMergeSubtitles,
-        // --- Export new items for desaturation ---
         isDesaturating,
         setIsDesaturating,
         setDesaturationProgress,
         desaturationProgress,
         handleDesaturateVideoSegment,
-        // --- Export new items for audio extraction ---
         isExtractingAudio,
         audioExtractionProgress,
         handleExtractAudio,
-        // --- End export ---
+        // EXPORT NEW STATES AND FUNCTION FROM THE NEW HOOK
+        isApiBurningSubtitles, // For API-based subtitle burning
+        apiBurningProgress,    // For API-based subtitle burning
+        handleBurnSubtitlesViaApi, // New function to trigger API-based burning
+        toggleSubtitlesVisibility, // EXPORT THE NEW TOGGLE FUNCTION
+        areSubtitlesVisibleOnCanvas: projectState.areSubtitlesVisibleOnCanvas, // EXPORT CURRENT VISIBILITY STATE
     }
 };

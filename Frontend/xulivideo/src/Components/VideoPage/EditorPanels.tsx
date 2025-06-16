@@ -415,7 +415,7 @@ export const EditorPanels: React.FC<EditorPanelsProps> = ({ selectedMenuKey, log
                                                                 justifyContent: 'space-between',
                                                                 alignItems: 'center',
                                                                 fontSize: '12px',
-                                                                color: token.colorTextSecondary,
+                                                                color: 'black',
                                                                 marginBottom: 4
                                                             }}>
                                                                 <span>{formatTime(item.startTime).slice(0, -1)}</span>
@@ -423,7 +423,7 @@ export const EditorPanels: React.FC<EditorPanelsProps> = ({ selectedMenuKey, log
                                                             </div>
                                                             <div style={{
                                                                 fontSize: '14px',
-                                                                color: token.colorText,
+                                                                color: 'black',
                                                                 whiteSpace: 'pre-wrap',
                                                                 fontFamily: logic.projectState.subtitleFontFamily
                                                             }}>
@@ -463,7 +463,8 @@ export const EditorPanels: React.FC<EditorPanelsProps> = ({ selectedMenuKey, log
                                                                                 style={{
                                                                                     fontSize: '11px',
                                                                                     padding: '0 5px',
-                                                                                    color: token.colorTextSecondary
+                                                                                    color: 'black',
+                                                                                    backgroundColor:'white',
                                                                                 }}
                                                                                 icon={
                                                                                     <BarsOutlined

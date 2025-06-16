@@ -12,6 +12,7 @@ import com.example.video.editor.model.User;
 public interface UserMapper {
 	@Mapping(target = "workspace", source = "workspace")
 	@Mapping(target = "accountTier", expression = "java(mapAccountTier(user.getAccountTier()))")
+	@Mapping(target = "roleName", source = "role.roleName")
 	UserDTO toDto(User user);
 
 	default AccountTierDTO mapAccountTier(AccountTier tier) {
