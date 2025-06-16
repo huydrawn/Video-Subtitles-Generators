@@ -1,16 +1,15 @@
 // src/Hooks/Logic/CanvasRenderer.ts
 
 import { RefObject } from 'react';
-import type { EditorProjectState, Clip, Keyframe, SubtitleEntry } from '../../Components/VideoPage/types';
-import { interpolateValue, getWrappedLines } from '../../Components/VideoPage/utils'; // Ensure path is correct
+import type { EditorProjectState, Clip, Keyframe, SubtitleEntry } from '../../Components/VideoPage/types'; // Corrected path based on your import structure
+import { interpolateValue, getWrappedLines } from '../../Components/VideoPage/utils'; // Corrected path based on your import structure
 import {
-    SUBTITLE_OUTLINE_WIDTH, // Assuming this is defined in constants
-    SUBTITLE_MAX_WIDTH_PX,  // Assuming this is defined in constants
-    SUBTITLE_LINE_HEIGHT_MULTIPLIER, // Assuming this is defined in constants
-    SUBTITLE_BOTTOM_MARGIN_PX, // Assuming this is defined in constants
-    // SUBTITLE_FILL_COLOR, // These might come from projectState.subtitleColor now
-    // SUBTITLE_OUTLINE_COLOR,
-} from '../constants'; // Ensure path is correct for constants
+    SUBTITLE_OUTLINE_WIDTH,
+    SUBTITLE_LINE_HEIGHT_MULTIPLIER,
+    SUBTITLE_FILL_COLOR,
+    SUBTITLE_OUTLINE_COLOR,
+    SUBTITLE_BACKGROUND_COLOR,
+} from '../constants'; // Corrected path based on your import structure
 
 type MediaElementsRefValue = { [key: string]: HTMLVideoElement | HTMLImageElement };
 
@@ -27,26 +26,17 @@ export class CanvasRenderer {
     }
 
     public drawFrame = (
-        time: number, // Current editor playback time
+        time: number,
         projectState: EditorProjectState,
-        mediaElements: MediaElementsRefValue | null // Pass mediaElementsRef.current
+        mediaElements: MediaElementsRefValue | null
     ): void => {
         const canvas = this.canvasRef.current;
-        if (!canvas) {
-            // console.warn("CanvasRenderer: Canvas not available.");
-            return;
-        }
+        if (!canvas) { return; }
         const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            // console.warn("CanvasRenderer: Failed to get 2D context.");
-            return;
-        }
+        if (!ctx) { return; }
 
         const { width: canvasWidth, height: canvasHeight } = projectState.canvasDimensions || {};
-        if (!canvasWidth || !canvasHeight || canvasWidth <= 0 || canvasHeight <= 0) {
-            // console.warn("CanvasRenderer: Invalid canvas dimensions.");
-            return;
-        }
+        if (!canvasWidth || !canvasHeight || canvasWidth <= 0 || canvasHeight <= 0) { return; }
 
         if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
             canvas.width = canvasWidth;
@@ -56,57 +46,32 @@ export class CanvasRenderer {
         const currentMediaElements = mediaElements || {};
         ctx.clearRect(0, 0, canvasWidth, canvasHeight); // Clear canvas
 
-        // Draw Media Clips (Video and Image)
+        // Draw Media Clips (Video and Image) - Logic remains unchanged
         projectState.tracks.forEach(track => {
             track.clips.forEach(clip => {
                 const isMediaClip = clip.type === 'video' || clip.type === 'image';
-                const isSubtitleAssociatedClip = clip.type === 'text' && projectState.subtitles.some(sub => sub.id === clip.id); // Text clips used for subtitles
+                const isSubtitleAssociatedClip = clip.type === 'text' && projectState.subtitles.some(sub => sub.id === clip.id);
 
                 if (isMediaClip && !isSubtitleAssociatedClip && time >= clip.startTime && time < clip.endTime) {
                     const element = currentMediaElements[clip.id];
-                    if (!element) {
-                        // console.warn(`DrawFrame: Media element for clip ${clip.id} not found at time ${time}.`);
-                        return; // Skip drawing this clip
-                    }
+                    if (!element) { return; }
 
                     if (element instanceof HTMLVideoElement) {
-                        if (element.readyState < element.HAVE_CURRENT_DATA) {
-                            // console.warn(`DrawFrame: Video ${clip.id} not ready (readyState: ${element.readyState}). Waiting for data.`);
-                            // Optionally draw a "loading" placeholder for this clip
-                            // ctx.fillStyle = 'rgba(50,50,50,0.7)';
-                            // ctx.fillRect(calculated_x, calculated_y, calculated_width, calculated_height); // Placeholder dimensions
-                            return; // Don't attempt to draw if not ready
-                        }
-
-                        // Sync video's currentTime if editor is paused or if there's a significant discrepancy.
-                        // The PlaybackController should handle primary syncing during play/seek.
-                        // This is a fallback to ensure the correct frame is drawn, especially after a seek
-                        // or when the editor is paused.
+                        if (element.readyState < element.HAVE_CURRENT_DATA) { return; }
                         const clipTime = Math.max(0, time - clip.startTime);
                         if (element.seekable.length > 0 && element.duration !== undefined && clipTime >= 0 && clipTime <= element.duration + 0.1) {
-                            // Only force currentTime update if video is paused OR if it's playing but significantly out of sync.
-                            // A smaller threshold for paused videos ensures immediate frame update.
-                            // A larger threshold for playing videos prevents stutter if browser's own playback is slightly off.
-                            const syncThreshold = element.paused ? 0.05 : 0.20; // seconds
+                            const syncThreshold = element.paused ? 0.05 : 0.20;
                             if (Math.abs(element.currentTime - clipTime) > syncThreshold) {
-                                try {
-                                    // console.log(`DrawFrame: Syncing video ${clip.id} from ${element.currentTime.toFixed(3)} to ${clipTime.toFixed(3)} (editor time: ${time.toFixed(3)})`);
-                                    element.currentTime = clipTime;
-                                } catch (e) {
-                                    // console.warn(`DrawFrame: Error setting currentTime for ${clip.id}:`, e);
-                                    // This can happen if seeking too rapidly or video is in a bad state.
-                                }
+                                try { element.currentTime = clipTime; } catch (e) { console.error(`DrawFrame: Error setting currentTime for ${clip.id}:`, e); }
                             }
                         }
                     }
 
-                    // Calculate interpolated properties
                     const pos = this.interpolateValue(clip.keyframes?.position, time, clip.position);
                     const scale = this.interpolateValue(clip.keyframes?.scale, time, clip.scale);
                     const rotation = this.interpolateValue(clip.keyframes?.rotation, time, clip.rotation ?? 0);
                     const opacity = this.interpolateValue(clip.keyframes?.opacity, time, clip.opacity ?? 1);
 
-                    // Determine base dimensions
                     let baseWidth = clip.originalWidth;
                     let baseHeight = clip.originalHeight;
                     if (element instanceof HTMLVideoElement && (baseWidth === undefined || baseWidth <= 0)) baseWidth = element.videoWidth;
@@ -114,10 +79,8 @@ export class CanvasRenderer {
                     if (element instanceof HTMLImageElement && (baseWidth === undefined || baseWidth <= 0)) baseWidth = element.naturalWidth;
                     if (element instanceof HTMLImageElement && (baseHeight === undefined || baseHeight <= 0)) baseHeight = element.naturalHeight;
 
-                    // Fallback dimensions if still not available (e.g. for a 'text' clip that's not a subtitle)
                     if (baseWidth === undefined || baseWidth <= 0) baseWidth = (clip.type === 'text' ? 300 : 100);
                     if (baseHeight === undefined || baseHeight <= 0) baseHeight = (clip.type === 'text' ? 80 : 100);
-
 
                     const scaledWidth = baseWidth * scale.x;
                     const scaledHeight = baseHeight * scale.y;
@@ -125,100 +88,124 @@ export class CanvasRenderer {
                     const centerY_px = pos.y * canvasHeight;
 
                     ctx.save();
-                    ctx.translate(centerX_px, centerY_px); // Move to center of clip
-                    ctx.rotate(rotation * Math.PI / 180);   // Rotate around center
+                    ctx.translate(centerX_px, centerY_px);
+                    ctx.rotate(rotation * Math.PI / 180);
                     ctx.globalAlpha = opacity;
 
-                    try {
-                        // Draw image from its center
-                        ctx.drawImage(element, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
-                    } catch (e) {
-                        console.error(`CanvasRenderer: Error drawing element for clip ${clip.id}:`, e);
-                        // This can happen if the media element becomes invalid (e.g., source removed)
-                        // or due to cross-origin issues if not handled.
-                    }
+                    try { ctx.drawImage(element, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight); }
+                    catch (e) { console.error(`CanvasRenderer: Error drawing element for clip ${clip.id}:`, e); }
                     ctx.restore();
                 }
             });
         });
 
         // Draw Subtitles (if any)
-        if (projectState.areSubtitlesVisibleOnCanvas) { // ONLY draw if this flag is true
-            // Draw Subtitles (if any)
+        if (projectState.areSubtitlesVisibleOnCanvas) {
             const activeSubtitle = projectState.subtitles.find(sub => time >= sub.startTime && time < sub.endTime);
             if (activeSubtitle) {
                 ctx.save();
-                const fontSize = projectState.subtitleFontSize || 24;
+
+                // --- NEW SUBTITLE SIZING AND POSITIONING LOGIC ---
+                // Treating canvasWidth/Height as videoWidth/Height for responsive scaling
+                const videoWidth = canvasWidth;
+                const videoHeight = canvasHeight;
+
+                // Subtitle area width: 80% of video width
+                const subtitleAreaWidth = videoWidth * 0.8;
+
+                // Bottom margin: 5% of video height
+                const subtitleBottomMarginPx = videoHeight * 0.05;
+
+                // Font size: 4.5% of video height
+                const calculatedFontSize = videoHeight * 0.045;
+
+                // Font properties from project state (family, bold, italic, underline, colors)
                 const fontFamily = projectState.subtitleFontFamily || 'Arial';
                 const textAlign = projectState.subtitleTextAlign || 'center';
                 const isBold = projectState.isSubtitleBold ?? false;
                 const isItalic = projectState.isSubtitleItalic ?? false;
                 const isUnderlined = projectState.isSubtitleUnderlined ?? false;
-                const fillColor = projectState.subtitleColor || '#FFFFFF'; // from projectState
-                const backgroundColor = projectState.subtitleBackgroundColor || 'rgba(0,0,0,0.7)'; // from projectState
-                const outlineColor = '#000000'; // Example, or use a constant
-                const outlineWidth =  SUBTITLE_OUTLINE_WIDTH;
+                const fillColor = projectState.subtitleColor || SUBTITLE_FILL_COLOR;
+                const backgroundColor = projectState.subtitleBackgroundColor || SUBTITLE_BACKGROUND_COLOR;
+                const outlineColor = SUBTITLE_OUTLINE_COLOR;
+                const outlineWidth = SUBTITLE_OUTLINE_WIDTH;
 
-
-                const fontStyle = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
+                // Set font style
+                const fontStyle = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${calculatedFontSize}px ${fontFamily}`;
                 ctx.font = fontStyle;
-                ctx.textAlign = textAlign;
-                ctx.textBaseline = 'alphabetic'; // Align text based on the alphabetic baseline
+                ctx.textBaseline = 'bottom'; // Crucial for drawing text upwards from a baseline
 
-                // Calculate scaled max width for subtitles based on canvas size
-                const scaledSubtitleMaxWidth = (SUBTITLE_MAX_WIDTH_PX / 1280) * canvasWidth; // Assuming 1280 is reference
-                const wrappedLines = getWrappedLines(ctx, activeSubtitle.text, scaledSubtitleMaxWidth);
-                const lineHeight = fontSize * SUBTITLE_LINE_HEIGHT_MULTIPLIER;
+                // Wrap lines based on the calculated subtitle area width
+                const wrappedLines = getWrappedLines(ctx, activeSubtitle.text, subtitleAreaWidth);
+                const lineHeight = calculatedFontSize * SUBTITLE_LINE_HEIGHT_MULTIPLIER;
                 const totalTextHeight = wrappedLines.length * lineHeight;
 
-                let xPos: number;
+                // Calculate horizontal position (X) for text alignment
+                let xCanvasPos: number;
                 switch (textAlign) {
-                    case 'left': xPos = canvasWidth * 0.05; break; // Small margin from left
-                    case 'right': xPos = canvasWidth * 0.95; break; // Small margin from right
-                    case 'center': default: xPos = canvasWidth / 2; break;
+                    case 'left':
+                        // Start from the left edge of the subtitle area
+                        xCanvasPos = (videoWidth - subtitleAreaWidth) / 2;
+                        ctx.textAlign = 'left';
+                        break;
+                    case 'right':
+                        // End at the right edge of the subtitle area
+                        xCanvasPos = (videoWidth - subtitleAreaWidth) / 2 + subtitleAreaWidth;
+                        ctx.textAlign = 'right';
+                        break;
+                    case 'center':
+                    default:
+                        // Center of the video frame
+                        xCanvasPos = videoWidth / 2;
+                        ctx.textAlign = 'center';
+                        break;
                 }
 
-                // Y position for the *baseline* of the *last line* of text
-                const lastLineBaselineY = canvasHeight - SUBTITLE_BOTTOM_MARGIN_PX;
+                // Calculate vertical position (Y) for the bottom of the last line
+                const lastLineBottomY = videoHeight - subtitleBottomMarginPx;
 
-                // Optional: Draw background for subtitles
+                // Calculate Y position for each line (drawing from bottom up)
+                const linesBottomYs = wrappedLines.map((_, index) =>
+                    lastLineBottomY - (wrappedLines.length - 1 - index) * lineHeight
+                );
+
+                // Draw background box (if applicable)
                 if (backgroundColor && backgroundColor !== 'transparent' && wrappedLines.length > 0) {
                     let maxLineWidth = 0;
                     wrappedLines.forEach(line => maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width));
 
-                    const padding = fontSize * 0.2; // Dynamic padding
+                    const padding = calculatedFontSize * 0.2; // Dynamic padding based on calculated font size
                     const bgWidth = maxLineWidth + 2 * padding;
-                    const bgHeight = totalTextHeight + (fontSize * (SUBTITLE_LINE_HEIGHT_MULTIPLIER -1) * 0.5) ; // Adjusted height for better fit
+                    const bgHeight = totalTextHeight + 2 * padding;
 
                     let bgX;
-                    // Y for top of background box. lastLineBaselineY is baseline of last line.
-                    // So, totalTextHeight up from there is roughly top of first line's text area.
-                    const bgY = lastLineBaselineY - totalTextHeight + (lineHeight - fontSize) / 2  - padding + (fontSize * (SUBTITLE_LINE_HEIGHT_MULTIPLIER -1) * 0.25);
-
-
                     switch (textAlign) {
-                        case 'left': bgX = xPos - padding; break;
-                        case 'right': bgX = xPos - maxLineWidth - padding; break;
-                        case 'center': default: bgX = xPos - bgWidth / 2; break;
+                        case 'left': bgX = xCanvasPos - padding; break;
+                        case 'right': bgX = xCanvasPos - bgWidth + padding; break;
+                        case 'center': default: bgX = xCanvasPos - bgWidth / 2; break;
                     }
+
+                    // bgY is the top of the background box
+                    const bgY = lastLineBottomY - totalTextHeight - padding;
+
                     ctx.fillStyle = backgroundColor;
                     ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
                 }
 
-
                 // Draw text (outline then fill)
                 wrappedLines.forEach((line, index) => {
-                    const lineBaselineY = lastLineBaselineY - (wrappedLines.length - 1 - index) * lineHeight;
+                    const lineBottomY = linesBottomYs[index]; // Get Y for current line
+
                     if (outlineWidth > 0 && outlineColor) {
                         ctx.strokeStyle = outlineColor;
                         ctx.lineWidth = outlineWidth;
-                        ctx.lineJoin = 'round'; // Smoother outlines
-                        ctx.miterLimit = 2;
-                        ctx.strokeText(line, xPos, lineBaselineY);
+                        ctx.lineJoin = 'round';
+                        ctx.miterLimit = 2; // Helps prevent sharp corners on outline
+                        ctx.strokeText(line, xCanvasPos, lineBottomY);
                     }
                     if (fillColor) {
                         ctx.fillStyle = fillColor;
-                        ctx.fillText(line, xPos, lineBaselineY);
+                        ctx.fillText(line, xCanvasPos, lineBottomY);
                     }
 
                     // Draw underline if enabled
@@ -227,14 +214,14 @@ export class CanvasRenderer {
                         const textWidth = metrics.width;
                         let underlineStartX;
                         switch (textAlign) {
-                            case 'left': underlineStartX = xPos; break;
-                            case 'right': underlineStartX = xPos - textWidth; break;
-                            case 'center': default: underlineStartX = xPos - textWidth / 2; break;
+                            case 'left': underlineStartX = xCanvasPos; break;
+                            case 'right': underlineStartX = xCanvasPos - textWidth; break;
+                            case 'center': default: underlineStartX = xCanvasPos - textWidth / 2; break;
                         }
-                        // metrics.actualBoundingBoxDescent might be useful if available and reliable
-                        const underlineY = lineBaselineY + Math.max(2, fontSize * 0.08); // Position slightly below baseline
-                        ctx.strokeStyle = fillColor; // Underline usually matches text color
-                        ctx.lineWidth = Math.max(1, fontSize / 15); // Thinner line for underline
+                        // Underline position: slightly below the text baseline
+                        const underlineY = lineBottomY + Math.max(1, calculatedFontSize * 0.05);
+                        ctx.strokeStyle = fillColor; // Underline color matches text fill color
+                        ctx.lineWidth = Math.max(1, calculatedFontSize / 25); // Underline thickness
                         ctx.beginPath();
                         ctx.moveTo(underlineStartX, underlineY);
                         ctx.lineTo(underlineStartX + textWidth, underlineY);

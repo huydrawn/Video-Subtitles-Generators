@@ -53,12 +53,9 @@ export const SiderNavigation: React.FC<SiderNavigationProps> = ({
                     Settings
                 </Menu.Item>
                 <Menu.Divider />
-                <Menu.SubMenu key="team-folders" title="Team Folders" icon={<FolderOutlined />}>
-                    <Menu.Item key="new-folder-item" icon={<FolderOutlined />}>New folder</Menu.Item>
-                </Menu.SubMenu>
+
                 <Menu.Divider />
-                <Menu.Item key="shared-with-me" icon={<ShareAltOutlined />}>Shared with Me</Menu.Item>
-                <Menu.Item key="help-resources" icon={<QuestionCircleOutlined />}>Help and Resources</Menu.Item>
+
             </Menu>
             {!collapsed && displayedUsername && (
                 <div style={{

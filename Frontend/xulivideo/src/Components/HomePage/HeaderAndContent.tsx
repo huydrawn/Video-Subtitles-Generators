@@ -183,7 +183,6 @@ export const HeaderAndContent: React.FC<HeaderAndContentProps> = ({
                             aria-label="Open search"
                         />
                     )}
-                    <BellOutlined style={{ fontSize: 20, cursor: 'pointer' }} />
                     <div id="header-filters-dropdown"> {/* Wrapped Dropdown with a div for ID */}
                         <Dropdown
                             overlay={filterMenuContent}
@@ -202,8 +201,7 @@ export const HeaderAndContent: React.FC<HeaderAndContentProps> = ({
                         </Dropdown>
                     </div>
                     <SettingOutlined id="header-settings-icon" style={{ fontSize: 20, cursor: 'pointer' }} onClick={showSettingsPanel} /> {/* Thêm ID ở đây */}
-                    <UserOutlined style={{ fontSize: 20, cursor: 'pointer' }} />
-                    <UsergroupAddOutlined style={{ fontSize: 20, cursor: 'pointer' }} />
+
                     <div id="header-dark-mode-toggle"> {/* Wrapped DarkModeToggle with a div for ID */}
                         <DarkModeToggle />
                     </div>

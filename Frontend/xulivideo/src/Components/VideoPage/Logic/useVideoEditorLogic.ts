@@ -38,7 +38,7 @@ import { MediaElementManager } from '../../../Hooks/Logic/MediaElementManager';
 import { ClipManager } from '../../../Hooks/Logic/ClipManager';
 import { UploadManager } from '../../../Hooks/Logic/UploadManager';
 import { SubtitleManager, TranscriptionOptions } from '../../../Hooks/Logic/SubtitleManager';
-import { PreviewMoveableController } from '../../../Hooks/Logic/PreviewMoveableController';
+import { PreviewMoveableController } from  '../../../Hooks/Logic/PreviewMoveableController'
 import { TimelineMoveableController } from '../../../Hooks/Logic/TimelineMoveableController';
 import { PreviewZoomController } from '../../../Hooks/Logic/PreviewZoomController';
 
@@ -58,7 +58,8 @@ const FFMPEG_CORE_PATH = '/ffmpeg-core/ffmpeg-core.js';
 
 export const useVideoEditorLogic = (publicIdFromProp: string) => {
     const location = useLocation();
-    const { initialVideoUrl, publicId: routePublicId } = (location.state as { initialVideoUrl?: string, publicId?: string }) || {};
+    // THAY ĐỔI TẠI ĐÂY: Thêm initialVideoWidth và initialVideoHeight vào destructuring
+    const { initialVideoUrl, publicId: routePublicId, videoWidth: initialVideoWidth, videoHeight: initialVideoHeight } = (location.state as { initialVideoUrl?: string, publicId?: string, videoWidth?: number, videoHeight?: number }) || {};
     const currentPublicId = routePublicId || publicIdFromProp;
 
     const ffmpegRef = useRef<FFmpeg | null>(null);
@@ -105,14 +106,19 @@ export const useVideoEditorLogic = (publicIdFromProp: string) => {
             const initialClip: Clip = { id: clipId, type: 'video', source: initialVideoUrl, trackId, startTime: 0, duration: 0.01, endTime: 0.01, position: { x: 0.5, y: 0.5 }, scale: { x: 1, y: 1 }, rotation: 0, opacity: 1, keyframes: {}, name: `Loaded Video`, thumbnailUrls: [], originalWidth: 0, originalHeight: 0, secureUrl: initialVideoUrl };
             const initialAsset: MediaAsset = { id: assetId, name: 'Loaded Video', file: undefined, type: 'video/mp4', objectURL: undefined, secureUrl: initialVideoUrl };
             const initialTracks: Track[] = [{ id: trackId, clips: [initialClip] }];
+
+            // LOGIC MỚI: Ưu tiên kích thước video thực tế nếu có
+            const canvasW = (initialVideoWidth && initialVideoWidth > 0) ? initialVideoWidth : 1280;
+            const canvasH = (initialVideoHeight && initialVideoHeight > 0) ? initialVideoHeight : 720;
+
             return {
-                projectName: `Project ${currentPublicId}`, tracks: initialTracks, mediaAssets: [initialAsset], canvasDimensions: { width: 1280, height: 720 }, totalDuration: calculateTotalDuration(initialTracks), selectedClipId: clipId, isPlaying: false, isPreviewMuted: false, playbackRate: 1.0, uploadProgress: 0, uploadingFile: null, currentUploadTaskId: null, uploadTimeRemaining: '00:00', previewZoomLevel: 1.0, previewZoomMode: PREVIEW_ZOOM_FIT_MODE, subtitles: [], subtitleFontFamily: 'Arial', subtitleFontSize: DEFAULT_SUBTITLE_FONT_SIZE, subtitleTextAlign: DEFAULT_SUBTITLE_TEXT_ALIGN, isSubtitleBold: false, isSubtitleItalic: false, isSubtitleUnderlined: false, subtitleColor: SUBTITLE_FILL_COLOR, subtitleBackgroundColor: SUBTITLE_BACKGROUND_COLOR,
-                areSubtitlesVisibleOnCanvas: true, // THÊM DÒNG NÀY (mặc định hiển thị)
+                projectName: `Project ${currentPublicId}`, tracks: initialTracks, mediaAssets: [initialAsset], canvasDimensions: { width: canvasW, height: canvasH }, totalDuration: calculateTotalDuration(initialTracks), selectedClipId: clipId, isPlaying: false, isPreviewMuted: false, playbackRate: 1.0, uploadProgress: 0, uploadingFile: null, currentUploadTaskId: null, uploadTimeRemaining: '00:00', previewZoomLevel: 1.0, previewZoomMode: PREVIEW_ZOOM_FIT_MODE, subtitles: [], subtitleFontFamily: 'Arial', subtitleFontSize: DEFAULT_SUBTITLE_FONT_SIZE, subtitleTextAlign: DEFAULT_SUBTITLE_TEXT_ALIGN, isSubtitleBold: false, isSubtitleItalic: false, isSubtitleUnderlined: false, subtitleColor: SUBTITLE_FILL_COLOR, subtitleBackgroundColor: SUBTITLE_BACKGROUND_COLOR,
+                areSubtitlesVisibleOnCanvas: true, // Mặc định hiển thị
             };
         }
         return {
             projectName: `New Project ${currentPublicId}`, tracks: [{ id: `track-${Date.now()}`, clips: [] }], mediaAssets: [], canvasDimensions: { width: 1280, height: 720 }, totalDuration: 0, selectedClipId: null, isPlaying: false, isPreviewMuted: false, playbackRate: 1.0, uploadProgress: 0, uploadingFile: null, currentUploadTaskId: null, uploadTimeRemaining: '00:00', previewZoomLevel: 1.0, previewZoomMode: PREVIEW_ZOOM_FIT_MODE, subtitles: [], subtitleFontFamily: 'Arial', subtitleFontSize: DEFAULT_SUBTITLE_FONT_SIZE, subtitleTextAlign: DEFAULT_SUBTITLE_TEXT_ALIGN, isSubtitleBold: false, isSubtitleItalic: false, isSubtitleUnderlined: false, subtitleColor: SUBTITLE_FILL_COLOR, subtitleBackgroundColor: SUBTITLE_BACKGROUND_COLOR,
-            areSubtitlesVisibleOnCanvas: true, // THÊM DÒNG NÀY (mặc định hiển thị)
+            areSubtitlesVisibleOnCanvas: true, // Mặc định hiển thị
         };
     });
 
