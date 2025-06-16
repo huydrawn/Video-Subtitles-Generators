@@ -1,18 +1,7 @@
 package com.example.video.editor.controller;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Collections;
-import java.util.Map;
-import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,10 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
 import com.example.video.editor.service.SaveSubtitlesService;
-import com.example.video.editor.service.VideoService;
 import com.example.video.editor.service.progess.TaskProcessingService;
 
 import jakarta.validation.Valid;
@@ -41,12 +27,6 @@ import lombok.RequiredArgsConstructor;
 public class TestController {
 	private final TaskProcessingService taskProcessingService;
 	private final SaveSubtitlesService saveSubtitlesService;
-
-	@GetMapping
-	public ResponseEntity<String> ok() throws IOException {
-
-		return ResponseEntity.ok("ok");
-	}
 
 	@PostMapping
 	public ResponseEntity<?> addSubtitle(@RequestParam("file") MultipartFile subtitleFile) throws IOException {

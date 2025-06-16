@@ -9,6 +9,6 @@ import com.example.video.editor.model.Workspace;
 @Mapper(componentModel = "spring", uses = { ProjectMapper.class })
 public interface WorkspaceMapper {
 
-    @Mapping(target = "projects", source = "projects")
-    WorkspaceDto toDto(Workspace workspace);
+	@Mapping(target = "projects", source = "projects")
+	WorkspaceDto toDto(Workspace workspace);
 }
