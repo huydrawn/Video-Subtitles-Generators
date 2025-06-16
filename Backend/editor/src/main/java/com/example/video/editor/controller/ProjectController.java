@@ -28,8 +28,8 @@ public class ProjectController {
 	private final ProjectService projectService;
 
 	@PostMapping
-	@PreAuthorize("@workspacePermission.hasAccess(#user.userId, #workspacePublicId)")
-	@CacheEvict(key = "#user.userId")
+//	@PreAuthorize("@workspacePermission.hasAccess(#user.userId, #workspacePublicId)")
+//	@CacheEvict(key = "#user.userId")
 	public ResponseEntity<?> createProject(@PathVariable String workspacePublicId,
 			@RequestBody ProjectCreationRequest request, @AuthenticationPrincipal SecurityUser user)
 			throws NotFoundException {
@@ -38,7 +38,7 @@ public class ProjectController {
 	}
 
 	@PostMapping("/{projectPublicId}")
-	@PreAuthorize("@workspacePermission.hasAccess(#user.userId, #workspacePublicId)")
+//	@PreAuthorize("@workspacePermission.hasAccess(#user.userId, #workspacePublicId)")
 	public ResponseEntity<?> rename(@PathVariable String workspacePublicId, @PathVariable String projectPublicId,
 			@RequestBody RenameRequest request) throws NotFoundException {
 		projectService.reName(projectPublicId, request.getNewName());
@@ -46,7 +46,7 @@ public class ProjectController {
 	}
 
 	@DeleteMapping("/{projectPublicId}")
-	@PreAuthorize("@workspacePermission.hasAccess(#user.userId, #workspacePublicId)")
+//	@PreAuthorize("@workspacePermission.hasAccess(#user.userId, #workspacePublicId)")
 	public ResponseEntity<?> delete(@PathVariable String workspacePublicId, @PathVariable String projectPublicId,
 			@RequestBody RenameRequest request) throws NotFoundException {
 

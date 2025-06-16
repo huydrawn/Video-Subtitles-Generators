@@ -1,0 +1,71 @@
+{
+  "auth": {
+    "signInTitle": "Đăng nhập",
+    "createAccountTitle": "Tạo tài khoản",
+    "orUseEmail": "hoặc sử dụng tài khoản email của bạn",
+    "form": {
+      "username": {
+        "placeholder": "Tên người dùng"
+      },
+      "email": {
+        "placeholder": "Email"
+      },
+      "password": {
+        "placeholder": "Mật khẩu"
+      },
+      "repassword": {
+        "placeholder": "Nhập lại mật khẩu"
+      }
+    },
+    "forgotPassword": "Quên mật khẩu?",
+    "signInButton": "ĐĂNG NHẬP",
+    "signUpButton": "ĐĂNG KÝ",
+    "overlay": {
+      "welcomeBackTitle": "Chào mừng trở lại!",
+      "welcomeBackParagraph": "Để giữ kết nối với chúng tôi, vui lòng đăng nhập bằng thông tin cá nhân của bạn",
+      "signInButton": "Đăng nhập",
+      "helloFriendTitle": "Chào bạn!",
+      "helloFriendParagraph": "Nhập thông tin cá nhân của bạn và bắt đầu hành trình cùng chúng tôi",
+      "signUpButton": "Đăng ký"
+    },
+    "validation": {
+      "requiredEmail": "Vui lòng nhập Email của bạn!",
+      "invalidEmailFormat": "Vui lòng nhập một Email hợp lệ!",
+      "requiredPassword": "Vui lòng nhập mật khẩu của bạn!",
+      "requiredUsername": "Vui lòng nhập tên người dùng của bạn!",
+      "usernameMinLength": "Tên người dùng phải có ít nhất {{min}} ký tự.",
+      "usernameMaxLength": "Tên người dùng phải có tối đa {{max}} ký tự.",
+      "passwordMinLength": "Mật khẩu phải có ít nhất {{min}} ký tự.",
+      "requiredRepassword": "Vui lòng xác nhận mật khẩu của bạn!",
+      "passwordsMatch": "Hai mật khẩu bạn đã nhập không khớp!"
+    },
+    "alert": {
+      "okButton": "Đồng ý",
+      "registrationSuccessTitle": "Đăng ký thành công!",
+      "registrationSuccessText": "Tài khoản của bạn đã được tạo. Vui lòng đăng nhập.",
+      "registrationStatusTitle": "Trạng thái đăng ký",
+      "registrationStatusText": "Đăng ký đã được xử lý với trạng thái: {{status}}.",
+      "unexpectedError": "Đã xảy ra lỗi không mong muốn trong quá trình {{action}}.",
+      "serverResponseStatus": "Máy chủ phản hồi với trạng thái: {{status}}.",
+      "noServerResponse": "Không nhận được phản hồi từ máy chủ. Máy chủ có đang chạy và truy cập được không?",
+      "unknownError": "Đã xảy ra lỗi không xác định: {{message}}",
+      "registrationFailedTitle": "Đăng ký thất bại!",
+      "loginSuccessTitle": "Đăng nhập thành công!",
+      "redirecting": "Đang chuyển hướng...",
+      "loginStatusTitle": "Trạng thái đăng nhập",
+      "loginStatusText": "Đăng nhập đã được xử lý với trạng thái: {{status}}, nhưng không nhận được mã thông báo.",
+      "loginFailedTitle": "Đăng nhập thất bại!",
+      "invalidCredentials": "Email hoặc mật khẩu không hợp lệ.",
+      "oauthSuccess": "Bạn đã đăng nhập bằng Google.",
+      "oauthFailedTitle": "Đăng nhập thất bại",
+      "oauthFailedText": "Không nhận được mã thông báo truy cập, ID người dùng hoặc vai trò từ đăng nhập Google.",
+      "popupBlockedTitle": "Cửa sổ bật lên bị chặn!",
+      "popupBlockedText": "Vui lòng cho phép cửa sổ bật lên cho trang web này để tiếp tục đăng nhập bằng Google."
+    },
+    "invalidSession": "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+    "sessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+    "permissionsLoadFailed": "Không thể tải quyền người dùng.",
+    "connectionError": "Lỗi kết nối khi tải quyền: {{message}}",
+    "logoutSuccess": "Đã đăng xuất thành công!"
+  }
+}

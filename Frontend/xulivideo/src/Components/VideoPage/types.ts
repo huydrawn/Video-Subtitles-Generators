@@ -9,7 +9,7 @@ export interface Keyframe {
     value: number | { x: number; y: number } | string | any;
 }
 export type SubtitleTextAlign = 'left' | 'center' | 'right';
-export type ClipType = 'video' | 'image' | 'text';
+export type ClipType = 'video' | 'image' | 'text' | 'audio'; // Add 'audio'
 
 export interface Clip {
     id: string;
@@ -37,6 +37,15 @@ export interface Clip {
     color?: string;
     fontSize?: number;
     fontFamily?: string;
+}
+
+// Thêm định nghĩa VideoClip ở đây
+export interface VideoClip extends Clip {
+    type: 'video'; // Cụ thể hóa thuộc tính 'type' thành 'video'
+    // Nếu có bất kỳ thuộc tính nào chỉ dành riêng cho video mà không có trong Clip chung, bạn có thể thêm ở đây.
+    // Ví dụ:
+    // videoCodec?: string;
+    // frameRate?: number;
 }
 
 export interface Track {
@@ -101,6 +110,7 @@ export interface EditorProjectState {
     subtitleColor: string;
     subtitleBackgroundColor: string;
     processingProgress?: number;
+    areSubtitlesVisibleOnCanvas?: boolean;
 }
 
 // For useVideoEditorLogic.ts, SubtitleManager.ts, UploadManager.ts,
@@ -117,7 +127,7 @@ export interface EditorProjectState {
 // This will also need to reflect that setEditorState uses EditorStatus
 // And editorState itself is of type EditorStatus
 export type VideoEditorLogic = Omit<
-    ReturnType<typeof import('./useVideoEditorLogic').useVideoEditorLogic>,
+    ReturnType<typeof import('./Logic/useVideoEditorLogic').useVideoEditorLogic>,
     'editorState' | 'setEditorState'
 > & {
     editorState: EditorStatus;
