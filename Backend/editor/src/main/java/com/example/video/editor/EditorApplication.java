@@ -12,7 +12,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 @EnableCaching
 @EnableFeignClients(basePackages = "com.example.video.editor.client")
 @EnableJpaAuditing
-
 public class EditorApplication {
 
 	public static void main(String[] args) {

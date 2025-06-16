@@ -4,16 +4,24 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { Provider } from 'react-redux'; // Import Provider
-import { store } from './Store';
+import { store } from './Store'; // Import your Redux store
+
+// Import i18n configuration
+import './i18n'; // This line imports and initializes i18n
+
+
 const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
+    document.getElementById('root') as HTMLElement
 );
+
 root.render(
-  <React.StrictMode>
-      <Provider store={store}> {/* Bọc App bằng Provider và truyền store */}
-          <App />
-      </Provider>
-  </React.StrictMode>
+    <React.StrictMode>
+        {/* I18nextProvider should typically wrap the entire app */}
+            {/* Redux Provider wraps your App to provide the store */}
+            <Provider store={store}>
+                <App />
+            </Provider>
+    </React.StrictMode>
 );
 
 // If you want to start measuring performance in your app, pass a function

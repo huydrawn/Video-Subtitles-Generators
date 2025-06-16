@@ -1,73 +1,113 @@
-// File: src/App.tsx (or wherever your main App component is)
+import React, { lazy, Suspense } from 'react';
+import {
+    createBrowserRouter,
+    RouterProvider,
+    Outlet,
+    Navigate
+} from 'react-router-dom';
+import { Spin } from 'antd'; // Ant Design Spin component for loading fallback
 
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+// Import ProtectedRoute (đảm bảo đường dẫn chính xác)
+import ProtectedRoute from './Components/Auth/auth'; // Chắc chắn đường dẫn này đúng
 
-// Import the ProtectedRoute component (ensure this file is saved as auth.tsx)
-import ProtectedRoute from './Components/Auth/auth';
+// --- Component hiển thị khi chờ tải code ---
+const LoadingFallback = () => (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" />
+    </div>
+);
 
-// Import components directly (as they were in your original second App.tsx)
-import VideoPage from './Components/VideoPage/index'; // Using VideoPage as consistent name
-import UploadPage from './Components/VideoPage/upload';
-import SummaryPage from './Components/VideoPage/summary';
-import VideoEditorPage from './Components/VideoPage/VideoEditor';
-import AuthenticatePage from './Components/Auth/AuthenticatePage';
-import HomePage from './Components/VideoPage/home'; // This is your Kapwing-like page
-import NewHomePage from './Components/VideoPage/index'; // This is your Kapwing-like page
-import OAuth2Page from './Components/Auth/OAuth2RedirectPage';
+// --- Layout Chung bao gồm Suspense và Outlet ---
+// Tất cả các route con sẽ được render bên trong Outlet
+// và được bọc bởi Suspense để xử lý lazy loading
+const AppLayout = () => {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            {/* Có thể thêm Header/Footer/Sidebar chung ở đây nếu muốn */}
+            <Outlet />
+        </Suspense>
+    );
+};
 
+// --- Định nghĩa Lazy Load cho TẤT CẢ các component của Route ---
+const UploadPage = lazy(() => import('./Components/VideoPage/upload'));
+const SummaryPage = lazy(() => import('./Components/VideoPage/summary'));
+const VideoEditorPage = lazy(() => import('./Components/VideoPage/VideoEditor'));
+const AuthenticatePage = lazy(() => import('./Components/Auth/AuthenticatePage'));
+const HomePage = lazy(() => import('./Components/HomePage/home')); // Kapwing-like page
+const OAuth2Page = lazy(() => import('./Components/Auth/OAuth2RedirectPage'));
+const PaymentSuccessPage = lazy(() => import('./Components/HomePage/PaymentSuccessPage'));
+const UserPageContainer = lazy(() => import('./Components/HomePage/UserPageContainer')); // Kapwing-like page
+const ForgotPassword = lazy(() => import('./Components/Auth/ForgotPassword'));
+const UpdatePassword = lazy(() => import('./Components/Auth/UpdatePassword'));
+const VerifyOtp = lazy(() => import('./Components/Auth/VerifyOtp'));
+const UserManager = lazy(() => import('./Components/Admin/UserManager'));
+
+// --- Cấu hình Router với createBrowserRouter ---
+const router = createBrowserRouter([
+    {
+        path: "/",
+        element: <AppLayout />, // Sử dụng Layout chung cho tất cả các routes
+        children: [
+            // --- Default Route ---
+            // The root path "/" should display HomePage
+            {
+                index: true, // Chỉ định đây là route mặc định cho path cha ("/")
+                element: <HomePage />
+            },
+
+            // --- Public Routes (No Protection) ---
+            { path: "login", element: <AuthenticatePage /> },
+            { path: "register", element: <AuthenticatePage /> },
+            { path: "oauth2/redirect", element: <OAuth2Page /> },
+            // These are the pages that were redirecting unexpectedly
+            { path: "forgotpassword", element: <ForgotPassword /> }, // Giữ nguyên path này theo code cũ
+            { path: "verifyotp", element: <VerifyOtp /> },
+            { path: "updatepassword", element: <UpdatePassword /> },
+
+            // --- Protected Routes (Require Authentication) ---
+            // These routes use ProtectedRoute component
+            {
+                path: "index",
+                element: <ProtectedRoute component={UserPageContainer} />,
+                // loader: yourLoaderFunction, // Thêm loader nếu cần fetch data trước khi render
+            },
+            {
+                path: "upload",
+                element: <ProtectedRoute component={UploadPage} />,
+            },
+            {
+                path: "summary",
+                element: <ProtectedRoute component={SummaryPage} />,
+            },
+            {
+                path: "paymentsuccess",
+                element: <ProtectedRoute component={PaymentSuccessPage} />,
+            },
+            {
+                path: "videoeditor",
+                element: <ProtectedRoute component={VideoEditorPage} />,
+            },
+            {
+                path: "usermanager",
+                element: <ProtectedRoute component={UserManager} />,
+            },
+
+
+            // --- Catch-all Route (Tùy chọn) ---
+            // Nếu bạn muốn bất kỳ đường dẫn nào không khớp sẽ chuyển hướng về trang chủ
+            // { path: "*", element: <Navigate to="/" replace /> }
+            // Lưu ý: Nếu có index: true ở trên, thì "*" sẽ bắt các path khác ngoài "/"
+            // mà không khớp với các path con khác.
+        ]
+    }
+]);
+
+// Component App giờ chỉ cần cung cấp RouterProvider
 function App() {
     return (
-        <BrowserRouter>
-            <Routes>
-                {/* --- Routes NOT requiring protection --- */}
-
-                {/* The root path "/" should show HomePage and is NOT protected */}
-                <Route path="/" element={<HomePage />} />
-
-                {/* Authentication routes are typically NOT protected by a login-redirect rule */}
-                <Route path="/login" element={<AuthenticatePage />} />
-                <Route path="/register" element={<AuthenticatePage />} />
-                <Route path="/oauth2/redirect" element={<OAuth2Page />} />
-                {/* --- Routes REQUIRING protection --- */}
-                {/* Wrap the target component with ProtectedRoute for these paths */}
-                <Route
-                    path="/index"
-                    element={<ProtectedRoute component={NewHomePage} />}
-                />
-                {/* /video route */}
-                <Route
-                    path="/video"
-                    element={<ProtectedRoute component={VideoPage} />}
-                />
-
-                {/* /upload route */}
-                <Route
-                    path="/upload"
-                    element={<ProtectedRoute component={UploadPage} />}
-                />
-
-                {/* /summary route */}
-                <Route
-                    path="/summary"
-                    element={<ProtectedRoute component={SummaryPage} />}
-                />
-
-                {/* /videoeditor route */}
-                <Route
-                    path="/videoeditor"
-                    element={<ProtectedRoute component={VideoEditorPage} />}
-                />
-                <Route
-                    path="/"
-                    element={<ProtectedRoute component={UploadPage} />}
-                />
-
-                {/* --- Catch-all Route --- */}
-                {/* Redirect any unmatched route to the unprotected home page "/" */}
-                <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-        </BrowserRouter>
+        <RouterProvider router={router} />
+        // Không cần <BrowserRouter>, <Routes> ở đây nữa
     );
 }
 

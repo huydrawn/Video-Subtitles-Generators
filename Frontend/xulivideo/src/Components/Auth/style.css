@@ -1,0 +1,278 @@
+/* style.css - Chỉ dành riêng cho ForgotPasswordPage.tsx */
+
+/* Base body styling */
+body {
+    margin: 0;
+    font-family: sans-serif;
+    min-height: 100vh;
+    /* Optional: Hide scrollbar if not needed on this specific page */
+    overflow-y: hidden;
+}
+
+/* Container for the whole page to ensure content is centered */
+.forgot-password-container { /* Đổi tên class để tránh xung đột */
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Để ảnh nền không tràn ra */
+}
+
+/* Hero Section - Centers content */
+.hero-section {
+    position: relative;
+    min-height: 100vh;
+    width: 100%; /* Đảm bảo chiếm toàn bộ chiều rộng */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Quan trọng để hình ảnh nền không tràn */
+    padding: 40px 20px; /* Padding để card không chạm mép màn hình */
+    box-sizing: border-box; /* Đảm bảo padding không làm tăng kích thước */
+}
+
+/* Background Image */
+.hero-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Đảm bảo ảnh bao phủ toàn bộ */
+    z-index: -1; /* Đặt ảnh ra phía sau */
+}
+
+/* Content Wrapper - Để căn giữa card */
+.content {
+    width: 100%;
+    max-width: 450px; /* Max-width phù hợp hơn cho form quên mật khẩu */
+    display: flex;
+    justify-content: center;
+}
+
+/* --- Glassmorphism Card Styling --- */
+.custom-card {
+    background-color: rgba(255, 255, 255, 0.1); /* Màu nền trong suốt */
+    backdrop-filter: blur(15px); /* Hiệu ứng làm mờ */
+    -webkit-backdrop-filter: blur(15px); /* Hỗ trợ Safari */
+    padding: 35px 40px; /* Padding bên trong card */
+    border-radius: 20px; /* Bo góc */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Viền mờ */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15); /* Đổ bóng */
+    width: 100%;
+    opacity: 0; /* Bắt đầu với opacity 0 cho animation */
+    animation: slideUpFadeInBlurForm 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; /* Animation khi load */
+}
+
+/* Card Body - Reset padding từ Bootstrap */
+.card-body {
+    padding: 0; /* Đặt padding trong .custom-card thay vì ở đây */
+}
+
+/* Heading */
+.card-body h3 {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 2.5rem; /* Khoảng cách dưới tiêu đề */
+    color: white; /* Màu chữ trắng */
+    font-size: 1.8rem;
+}
+
+/* Form Styling */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px; /* Khoảng cách giữa các nhóm form */
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* margin-bottom đã được thay thế bằng gap của form cha */
+}
+
+/* --- Label Styling --- */
+.form-group label.form-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    width: 100%;
+    margin-bottom: 6px; /* Khoảng cách giữa label và input */
+    color: rgba(255, 255, 255, 0.9);
+    display: block;
+}
+
+/* --- Input Field Styling (Underline Style) --- */
+input.form-control {
+    font-size: 1rem;
+    padding: 10px 5px;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4); /* Chỉ có viền dưới */
+    background-color: transparent; /* Nền trong suốt */
+    color: white; /* Màu chữ */
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+    outline: none; /* Bỏ outline khi focus */
+    border-radius: 0; /* Bỏ bo góc mặc định */
+}
+
+input.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+    opacity: 1;
+    font-weight: 300;
+}
+
+input.form-control:focus {
+    border-bottom-color: white; /* Viền dưới sáng hơn khi focus */
+    box-shadow: none;
+}
+
+/* --- Button Group for layout --- */
+.button-group {
+    margin-bottom: 20px; /* Khoảng cách dưới button */
+    margin-top: 15px; /* Khoảng cách trên button, để tạo khoảng cách với input cuối cùng */
+}
+
+/* --- Submit Button Styling --- */
+button.btn.btn-primary {
+    font-size: 1rem;
+    padding: 12px;
+    border-radius: 25px; /* Nút hình viên thuốc */
+    border: none;
+    cursor: pointer;
+    background-color: white; /* Nền trắng */
+    color: #333; /* Chữ màu tối */
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    width: 100%;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+button.btn.btn-primary:disabled {
+    background-color: rgba(204, 204, 204, 0.8);
+    color: #777;
+    cursor: not-allowed;
+    opacity: 0.7;
+    box-shadow: none;
+}
+
+button.btn.btn-primary:hover:not(:disabled) {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Error Message Styling (if needed for client-side validation) --- */
+.error-message.below-input-error {
+    display: block;
+    color: #ffdddd;
+    font-size: 0.85em;
+    margin-top: 6px;
+    width: 100%;
+    text-align: left;
+    font-weight: 500;
+}
+
+/* --- Return to Login Link Styling --- */
+.text-center { /* Class chung cho văn bản căn giữa */
+    text-align: center;
+}
+
+.card-body p.text-center {
+    margin-top: 25px; /* Khoảng cách trên link */
+    margin-bottom: 0;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.card-body p.text-center a.text-primary {
+    color: #cceeff; /* Màu xanh nhạt cho link */
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.card-body p.text-center a.text-primary:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 30px 15px;
+    }
+    .content {
+        max-width: 90%;
+    }
+    .custom-card {
+        padding: 30px;
+    }
+    .card-body h3 {
+        font-size: 1.6rem;
+        margin-bottom: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .content {
+        max-width: 95%;
+    }
+    .custom-card {
+        padding: 25px 20px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    input.form-control,
+    button.btn.btn-primary {
+        font-size: 0.9rem;
+    }
+    button.btn.btn-primary {
+        padding: 11px;
+    }
+    .form-group label.form-label {
+        font-size: 0.85rem;
+    }
+    .card-body h3 {
+        font-size: 1.5rem;
+    }
+    form {
+        gap: 15px;
+    }
+}
+
+/* --- Animation Keyframes --- */
+@keyframes slideUpFadeInBlurForm {
+    from {
+        opacity: 0;
+        transform: translateY(50px);
+        filter: blur(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0px);
+    }
+}
+.ant-table-thead > tr > th {
+    background-color: #f8f9fa !important; /* Lighter grey for table header */
+    color: #343a40 !important;
+    font-weight: bold !important;
+}
+
+/* Ensure the submenu indicator is visible for dark theme */
+.ant-menu-dark .ant-menu-submenu-arrow {
+    color: #c9d1d9 !important; /* Adjust arrow color */
+}
+
+/* Submenu title text for dark theme */
+.ant-menu-dark .ant-menu-submenu-title .ant-menu-title-content {
+    color: #c9d1d9 !important; /* Default text color */
+}
+
+/* Active/selected submenu title */
+.ant-menu-dark .ant-menu-submenu-title.ant-menu-item-selected .ant-menu-title-content,
+.ant-menu-dark .ant-menu-submenu-title.ant-menu-item-active .ant-menu-title-content {
+    color: #fff !important; /* Active text color */
+}
